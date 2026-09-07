@@ -72,3 +72,10 @@
 [34m[info] [0m [23] blocks 25.927.499-25.927.503: nothing new to prove
 [35m[surface][0m [1meth_getLogs(aggregator, AnswerUpdated)[0m [2m→[0m 0 logs over blocks 25.927.504-25.927.508 in 1 request(s), chunk 20000
 [34m[info] [0m [24] blocks 25.927.504-25.927.508: nothing new to prove
+npm error Lifecycle script `pf` failed with error:
+npm error code 4294967295
+npm error path D:\coding\Dora\chainlink\cli
+npm error workspace proof-feed-cli@0.1.0
+npm error location D:\coding\Dora\chainlink\cli
+npm error command failed
+npm error command C:\WINDOWS\system32\cmd.exe /d /s /c tsx src/index.ts watch --feed ETH/USD --interval 60
