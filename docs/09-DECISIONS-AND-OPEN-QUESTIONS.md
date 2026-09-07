@@ -1,0 +1,44 @@
+# 09 — Decisions (settled) and Open Questions (with resolution procedure)
+
+## A. Decisions — do not re-litigate without editing this file
+
+| ID | Decision | Rationale |
+|---|---|---|
+| D-01 | Source chain = Ethereum **mainnet** (chain key 3), not Sepolia. | "Real world" theme; real Chainlink feeds; index41 proved mainnet works on CC3 testnet. Sepolia only as Branch S fallback. |
+| D-02 | Consume `AnswerUpdated` (not `NewTransmission`). | Carries `updatedAt` in data, `answer` and `roundId` as indexed topics; the AggregatorInterface-compatible event every aggregator version has emitted. `NewTransmission` is OCR-version-specific. |
+| D-03 | Registry exposes `recordRound(...)` reusing `ASCBase` internals; inherited `execute` reverts. | `ASCBase.execute` is non-virtual and its hook does not pass `chainKey`; INV-03 requires binding the emitter check to the verified chainKey. |
+| D-04 | Round id = `(phaseId << 64) | aggregatorRoundId` as `uint80`. | Matches Chainlink proxy semantics; supports historical phases without collisions. |
+| D-05 | Demo branch: **BRANCH H (historical USDC depeg replay)**, decided 2026-09-08 by gate G5. | `Branch = H`; `genesisHeight(3) = 0` (**ambiguous — not the deciding evidence**); the decision rests on a direct probe: `getContinuityBounds(3, 16810000).isAttested == true`, and `getProof` + `verifySingle` **both succeeded on the real 2023-03-11 depeg tx** `0x24500a30…acd8` ($0.88000000, block 16,803,472, phase-2 aggregator, round 983). Evidence: `docs/spike-output.json`, details in docs/05 §4a. Branch L stays fully specified as the fallback if historical `recordRound` gas exceeds NFR-01. |
+| D-06 | PegGuard payout is binary (full notional), premium non-refundable, waiting period configurable (0 for demo). | Simplicity; proportional payout is P2. |
+| D-07 | Payout/premium asset = native CTC. | No canonical stablecoin on CC3 testnet; avoids a token deployment. |
+| D-08 | Feed registration is `onlyOwner` (`Ownable2Step`). | Configuration, not data. Disclosed limitation; P2 explores permissionless registration by proving proxy upgrade events. |
+| D-09 | Tests mock the verifier via `vm.etch` at `0x0FD2` but decode **real** captured bytes. | Foundry has no precompile; decoding is where our logic lives. |
+| D-10 | Stack pinned: Foundry, solc 0.8.30, via_ir, shanghai, `@gluwa/asc-contracts@0.2.1`, `@gluwa/usc-sdk@0.18.0`, ethers 6. | Same as official examples; minimizes unknowns. |
+| D-11 | Name: `ProofFeed` (infra) / `PegGuard` (product). No "Chainlink" in product names. | Avoid trademark issues; Chainlink is referenced as the data source only. |
+| D-12 | `MAX_LOGS = 64` per proven tx. | Bounds decode gas; Chainlink transmit txs contain a handful of logs. |
+
+## B. Open questions — each has an owner (Claude Code), a procedure, and a default
+
+Status as of the Day-1 spike, 2026-09-08. **RESOLVED** answers are backed by `docs/spike-output.json`.
+
+| ID | Question | Procedure | Status / answer |
+|---|---|---|---|
+| Q1 | Which prover host is live: `prover.cc3-testnet…` or `proof-gen-api.cc3-testnet…`? | `GET /api/v1/health` on both during `pf spike`; record in docs/05 §2. | **RESOLVED — both.** Identical health payloads and identical uptime counters ⇒ one service behind two hostnames. Using `prover.` per the SDK docstrings. Note the steady-state body says `"status":"degraded"` with `cc3_rpc_connected:false`; proving works anyway, so do not gate on it. |
+| Q2 | Does the **current** USDC/USD aggregator emit `AnswerUpdated`? | `eth_getLogs(aggregator, topic0=0x0559…)` over the last 20k blocks (G3a). If zero: check `NewTransmission` logs; if those exist, add a second parser `parseNewTransmission` behind the same emitter check — **only if G3a fails**. | **RESOLVED — yes.** 6 `AnswerUpdated` logs from `0xc9E1…e9d7` in the last 20k blocks. **No `NewTransmission` decoder path will be built**; `ChainlinkLogLib` stays single-event. |
+| Q3 | `getAttestationGenesisHeight(3)` value → Branch H possible? | Print in spike; compare to the depeg block (binary-search `eth_getBlockByNumber` on 2023-03-11T00:00Z). | **RESOLVED, but the metric was the wrong one.** It returns `0`, which the SDK defines as "unsupported **or** unset" — it cannot discriminate. Replaced in `pf spike` by a continuity-bounds probe plus a real historical `getProof` (see Q4). Depeg-day block boundary binary-searched to `16,801,144`. |
+| Q4 | Can the prover serve proofs for blocks far below the attested tip (deep history)? | Only relevant if Q3 says yes: `getProof` on the 2023 tx (Day 3). | **RESOLVED — yes, and pulled forward to Day 1.** `getProof` on the 2023-03-11 depeg tx succeeded in ~18 s (529 continuity roots) and `verifySingle` returned true. This is what makes D-05 = Branch H. |
+| Q5 | Does CC3 accept EIP-1559 transactions from Foundry scripts? | Try `forge script … --broadcast`; if rejected, add `--legacy`. Record in docs/05 §1. | **RESOLVED — but the real problem was elsewhere.** EIP-1559 was never the blocker. `forge script` fails on CC3 with `` `prevrandao` not set `` because the node's `eth_getBlockByNumber` response **omits `mixHash`**, which Foundry's block deserializer requires; neither `--legacy` nor `--skip-simulation` helps, because the failure happens while building the execution environment. `forge create` and `cast send` log the same deserialization error and proceed normally, so the deployment used those (with `--legacy`). `script/Deploy.s.sol` is kept as the documented chain-agnostic path. |
+| Q6 | Real gas of `recordRound` with decode? | G4 receipt. If > 2M, profile: avoid copying `receiptLogs` twice; parse only matching logs. | **RESOLVED — comfortably inside NFR-01, no profiling needed.** `recordRound` costs **320,546** gas on a live round (57 continuity roots) and **628,299** on the 2023 depeg round (529 roots). That is ~3× margin against the 2,000,000 cap on the deepest proof available, so **Branch H is safe on gas**. Cost scales with continuity-proof length, sub-linearly: 9× the roots ≈ 2× the gas. `eth_estimateGas` succeeded on every call — the pallet-evm fallback formula was never exercised (kept for other chains). |
+| Q7 | Public mainnet RPC log-range limits? | Try 50-block chunks (official example constant); reduce on 400/413. | **RESOLVED — endpoint-dependent, table in docs/05 §4b.** The `.env.example` suggestion (`publicnode`) 403s on `eth_getLogs` entirely. Default switched to `gateway.tenderly.co/public/mainnet`, which serves 20,000-block ranges; the CLI quarters the chunk on rejection down to 50. |
+| Q8 | Does Creditcoin already have a native external price feed? | Ask in `#buidl-ctc-qna` (1 message, Day 1). | Assume no; README cites `TWAPReader`'s trusted `oracleService` as the status quo. |
+| Q9 | Exact judging criteria published? | Check DoraHacks "Tracks"/"Announcements" tab and Discord pins; index41 reports "depth of Attestcoin Protocol utilization". | Optimize for depth + real-world evidence. |
+| Q10 | Is a synthetic `EvmV1` tx encoder feasible in Solidity tests in < 2 h? | Inspect `EvmV1Decoder._decodeReceiptChunk` chunk layout; if not, use byte-patching of real fixtures (docs/07 §1). | **RESOLVED — encoder, not byte-patching.** The layout is plain `abi.encode(uint8 txType, bytes[] chunks)` with `chunks[2]` = `abi.encode(uint8 status, uint64 gasUsed, LogEntryTuple[] logs, bytes bloom)` for types 0–2, so the encoder is a direct mirror of the decoder — about 30 minutes, in `test/utils/TxBytesBuilder.sol`. This gives exact negative cases (unregistered emitter, `receiptStatus == 0`, malformed log shape, 65 logs) instead of approximations. Positive paths still use the real captured mainnet fixtures. |
+
+## C. Things Claude Code must NOT do
+
+- Add any function that accepts a price or round from calldata (other than via proof bytes).
+- Hardcode an aggregator address in Solidity or in deploy scripts (read from the proxy at registration time).
+- Claim in README/video that ProofFeed provides "the latest price" or "real-time" data.
+- Use Sepolia for the headline demo when mainnet works.
+- Skip source verification on Blockscout.
+- Leave mocks reachable from `cli/` or `script/`.

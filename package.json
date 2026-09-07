@@ -1,0 +1,20 @@
+{
+  "name": "proof-feed",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ProofFeed + PegGuard — Chainlink rounds on Creditcoin, verified by the Attestcoin Protocol",
+  "license": "MIT",
+  "workspaces": ["cli"],
+  "scripts": {
+    "pf": "npm run --workspace proof-feed-cli pf --",
+    "typecheck": "npm run --workspace proof-feed-cli typecheck",
+    "lint": "npm run --workspace proof-feed-cli lint",
+    "test:cli": "npm run --workspace proof-feed-cli test",
+    "abi": "node scripts/export-abi.mjs"
+  },
+  "dependencies": {
+    "@gluwa/asc-contracts": "0.2.1",
+    "@openzeppelin/contracts": "^5.1.0"
+  },
+  "engines": { "node": ">=20" }
+}

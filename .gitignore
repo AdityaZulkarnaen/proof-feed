@@ -1,0 +1,8 @@
+.env
+node_modules/
+contracts/out/
+contracts/cache/
+contracts/broadcast/
+cli/.state/
+*.log
+docs/10-PENJELASAN-ID.md

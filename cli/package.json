@@ -1,0 +1,23 @@
+{
+  "name": "proof-feed-cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": { "pf": "src/index.ts" },
+  "scripts": {
+    "pf": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "tsc --noEmit",
+    "test": "node --import tsx --test test/*.test.ts"
+  },
+  "dependencies": {
+    "@gluwa/usc-sdk": "0.18.0",
+    "dotenv": "^16.4.5",
+    "ethers": "^6.13.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  }
+}

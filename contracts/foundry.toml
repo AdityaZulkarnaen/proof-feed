@@ -1,0 +1,20 @@
+[profile.default]
+src = "src"
+test = "test"
+out = "out"
+libs = ["../node_modules", "lib"]
+allow_paths = ["../node_modules"]
+fs_permissions = [{ access = "read", path = "./test/fixtures" }]
+remappings = [
+  "@gluwa/asc-contracts/=../node_modules/@gluwa/asc-contracts/",
+  "@openzeppelin/=../node_modules/@openzeppelin/",
+  "forge-std/=lib/forge-std/src/",
+]
+solc_version = "0.8.30"
+optimizer = true
+optimizer_runs = 200
+via_ir = true
+evm_version = "shanghai"
+
+[lint]
+lint_on_build = false

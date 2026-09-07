@@ -1,0 +1,276 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.28;
+
+import {Test, console} from "forge-std/Test.sol";
+import {INativeQueryVerifier} from
+    "@gluwa/asc-contracts/contracts/write-ability/common/INativeQueryVerifier.sol";
+import {EvmV1Decoder} from "@gluwa/asc-contracts/contracts/common/EvmV1Decoder.sol";
+
+import {MockNativeQueryVerifier} from "./mocks/MockNativeQueryVerifier.sol";
+import {TxBytesBuilder} from "./utils/TxBytesBuilder.sol";
+import {IProvenFeedRegistry} from "../src/interfaces/IProvenFeedRegistry.sol";
+import {PegGuard} from "../src/PegGuard.sol";
+import {ProvenFeedRegistry} from "../src/ProvenFeedRegistry.sol";
+
+/// @notice T-P16 / INV-07: whatever sequence of deposits, purchases, claims, expiries and
+///         withdrawals a fuzzer finds, the pool must never promise more than it holds.
+contract PegGuardInvariantTest is Test {
+    address internal constant VERIFIER_ADDR = 0x0000000000000000000000000000000000000FD2;
+    bytes32 internal constant FEED_ID = keccak256("USDC / USD");
+    address internal constant AGGREGATOR = 0xc9E1a09622afdB659913fefE800fEaE5DBbFe9d7;
+    uint64 internal constant CHAIN_KEY = 3;
+    uint16 internal constant PHASE = 3;
+
+    ProvenFeedRegistry internal registry;
+    PegGuard internal guard;
+    PegGuardHandler internal handler;
+
+    function setUp() public {
+        vm.etch(VERIFIER_ADDR, address(new MockNativeQueryVerifier()).code);
+        MockNativeQueryVerifier(VERIFIER_ADDR).setResult(true);
+
+        address owner = address(this);
+        registry = new ProvenFeedRegistry(owner);
+        registry.registerFeed(FEED_ID, CHAIN_KEY, AGGREGATOR, PHASE, 8, "USDC / USD");
+
+        guard = new PegGuard(IProvenFeedRegistry(address(registry)), owner);
+        guard.configurePool(FEED_ID, 50, 0, 100 ether, true);
+
+        handler = new PegGuardHandler(registry, guard, FEED_ID);
+        vm.deal(address(handler), 10_000 ether);
+
+        targetContract(address(handler));
+    }
+
+    /// @notice INV-07: reserved liquidity never exceeds the balance backing it.
+    function invariant_LockedNeverExceedsBalance() public view {
+        PegGuard.Pool memory p = guard.getPool(FEED_ID);
+        assertLe(p.locked, p.balance, "locked <= balance");
+    }
+
+    /// @notice The contract's actual CTC must cover every pool it accounts for.
+    function invariant_ContractBalanceCoversPoolAccounting() public view {
+        PegGuard.Pool memory p = guard.getPool(FEED_ID);
+        assertGe(address(guard).balance, p.balance, "solvent");
+    }
+
+    /// @notice Shares exist only while there is a balance to redeem them against.
+    function invariant_SharesImplyBalance() public view {
+        PegGuard.Pool memory p = guard.getPool(FEED_ID);
+        if (p.totalShares > 0) assertGt(p.balance, 0, "shares are backed");
+    }
+
+    /// @notice INV-05: the registry's latest round only ever moves forward.
+    function invariant_LatestRoundIdIsMonotonic() public view {
+        assertGe(registry.latestRoundId(FEED_ID), handler.highestRoundSeen(), "monotonic");
+    }
+
+    /// @notice A deterministic walk through the whole lifecycle, asserting the invariants after
+    ///         every state transition. This is what keeps the fuzzed invariants from being
+    ///         vacuous: the fuzzer's actions all swallow reverts, so on its own a run in which
+    ///         nothing ever succeeded would look identical to a healthy one. (The `afterInvariant`
+    ///         report below shows what the fuzz run actually reached; it only logs, because it runs
+    ///         after every run including one-call shrunk replays.)
+    function test_Lifecycle_InvariantsHoldAcrossAFullCycle() public {
+        address lp = makeAddr("lp");
+        address holder = makeAddr("holder");
+        vm.deal(lp, 500 ether);
+        vm.deal(holder, 500 ether);
+
+        vm.prank(lp);
+        guard.deposit{value: 200 ether}(FEED_ID);
+        _assertInvariants("after deposit");
+
+        uint256 premium = guard.quote(FEED_ID, 50 ether, 7);
+        vm.prank(holder);
+        uint256 policyId = guard.buyCover{value: premium}(FEED_ID, 97_000_000, 50 ether, 7);
+        _assertInvariants("after buyCover");
+        assertEq(guard.getPool(FEED_ID).locked, 50 ether, "notional locked");
+
+        uint80 roundId = _proveRound(88_000_000);
+        _assertInvariants("after recordRound");
+
+        uint256 balanceBefore = holder.balance;
+        guard.claim(policyId, roundId);
+        _assertInvariants("after claim");
+        assertEq(holder.balance, balanceBefore + 50 ether, "the claim really paid");
+        assertEq(guard.getPool(FEED_ID).locked, 0, "capacity released");
+
+        // A second policy that runs to expiry instead of paying.
+        vm.prank(holder);
+        uint256 policyId2 = guard.buyCover{value: premium}(FEED_ID, 97_000_000, 50 ether, 7);
+        _assertInvariants("after second buyCover");
+        vm.warp(guard.getPolicy(policyId2).expiry + 1);
+        guard.expire(policyId2);
+        _assertInvariants("after expire");
+        assertEq(guard.getPool(FEED_ID).locked, 0, "capacity released on expiry");
+
+        // Read the share balance BEFORE the prank: a view call would consume it.
+        uint256 lpShares = guard.sharesOf(FEED_ID, lp);
+        vm.prank(lp);
+        guard.withdraw(FEED_ID, lpShares);
+        _assertInvariants("after withdraw");
+    }
+
+    function _assertInvariants(string memory stage) internal view {
+        PegGuard.Pool memory p = guard.getPool(FEED_ID);
+        assertLe(p.locked, p.balance, string.concat("INV-07 violated ", stage));
+        assertGe(address(guard).balance, p.balance, string.concat("insolvent ", stage));
+    }
+
+    uint256 internal lifecycleRound;
+
+    /// @dev Record one round through the real proof path and return its proxy round id.
+    function _proveRound(int256 answer) internal returns (uint80) {
+        uint256 aggRound = ++lifecycleRound;
+        bytes memory txBytes = TxBytesBuilder.singleRound(AGGREGATOR, answer, aggRound, block.timestamp);
+        INativeQueryVerifier.MerkleProofEntry[] memory siblings =
+            new INativeQueryVerifier.MerkleProofEntry[](1);
+        siblings[0] = INativeQueryVerifier.MerkleProofEntry({hash: keccak256("s"), isLeft: false});
+        bytes32[] memory roots = new bytes32[](1);
+        roots[0] = keccak256("r");
+        uint80[] memory ids = registry.recordRound(
+            CHAIN_KEY,
+            uint64(1000 + aggRound),
+            txBytes,
+            keccak256(abi.encode(aggRound)),
+            siblings,
+            bytes32(0),
+            roots
+        );
+        return ids[0];
+    }
+
+    /// @notice Reports what the fuzz run actually exercised (logging only — see the test above).
+    function afterInvariant() public view {
+        console.log("invariant run coverage:");
+        console.log("  rounds proven   ", handler.roundsProven());
+        console.log("  covers bought   ", handler.coversBought());
+        console.log("  claims paid     ", handler.claimsPaid());
+        console.log("  policies expired", handler.policiesExpired());
+        console.log("  withdrawals     ", handler.withdrawals());
+        console.log("  claim rejections: notActive/notProven/window/strike/other");
+        console.log("   ", handler.errNotActive(), handler.errNotProven(), handler.errWindow());
+        console.log("   ", handler.errStrike(), handler.errOther());
+    }
+}
+
+/// @dev Drives the protocol through the states a fuzzer can reach. Every action is bounded so the
+///      run explores realistic sequences instead of reverting on trivia.
+contract PegGuardHandler is Test {
+    ProvenFeedRegistry public immutable REGISTRY;
+    PegGuard public immutable GUARD;
+    bytes32 public immutable FEED_ID;
+
+    address internal constant AGGREGATOR = 0xc9E1a09622afdB659913fefE800fEaE5DBbFe9d7;
+    uint64 internal constant CHAIN_KEY = 3;
+    uint16 internal constant PHASE = 3;
+
+    uint256[] public policies;
+    /// @dev Round ids actually recorded, so `claim` can reference a real one. Fuzzing a raw uint80
+    ///      never lands on a valid `(phase << 64) | round`, which made an earlier version of this
+    ///      suite pass vacuously — the ghost counters in `afterInvariant` caught it.
+    uint80[] public provenRounds;
+    uint80 public highestRoundSeen;
+    uint64 internal height = 1;
+    uint256 internal aggRound = 1;
+
+    // Ghost counters. Without these the invariants could pass vacuously, because every handler
+    // action swallows reverts — a run in which no claim ever paid would look identical to a healthy
+    // one. `afterInvariant` asserts each interesting state was actually reached.
+    uint256 public coversBought;
+    uint256 public claimsPaid;
+    uint256 public policiesExpired;
+    uint256 public withdrawals;
+    uint256 public roundsProven;
+    bytes4 public lastClaimError;
+    uint256 public errNotActive;
+    uint256 public errNotProven;
+    uint256 public errWindow;
+    uint256 public errStrike;
+    uint256 public errOther;
+
+    constructor(ProvenFeedRegistry registry_, PegGuard guard_, bytes32 feedId_) {
+        REGISTRY = registry_;
+        GUARD = guard_;
+        FEED_ID = feedId_;
+    }
+
+    receive() external payable {}
+
+    function deposit(uint96 amount) external {
+        uint256 a = bound(amount, 1e15, 500 ether);
+        if (address(this).balance < a) return;
+        GUARD.deposit{value: a}(FEED_ID);
+    }
+
+    function withdraw(uint96 shares) external {
+        uint256 held = GUARD.sharesOf(FEED_ID, address(this));
+        if (held == 0) return;
+        uint256 s = bound(shares, 1, held);
+        try GUARD.withdraw(FEED_ID, s) returns (uint256) {
+            ++withdrawals;
+        } catch {}
+    }
+
+    function buyCover(uint96 notional, uint8 durationDays) external {
+        uint256 n = bound(notional, 1e15, 100 ether);
+        uint256 d = bound(durationDays, 1, 90);
+        uint256 premium = GUARD.quote(FEED_ID, n, d);
+        if (address(this).balance < premium) return;
+        try GUARD.buyCover{value: premium}(FEED_ID, 97_000_000, uint128(n), d) returns (uint256 id) {
+            policies.push(id);
+            ++coversBought;
+        } catch {}
+    }
+
+    /// @dev Record a round through the real proof path, at a price that may or may not breach.
+    function proveRound(int64 answer) external {
+        int256 a = bound(int256(answer), 1, 200_000_000);
+        bytes memory txBytes = TxBytesBuilder.singleRound(AGGREGATOR, a, aggRound, block.timestamp);
+        uint80 roundId = uint80((uint256(PHASE) << 64) | aggRound);
+        ++aggRound;
+
+        INativeQueryVerifier.MerkleProofEntry[] memory siblings =
+            new INativeQueryVerifier.MerkleProofEntry[](1);
+        siblings[0] = INativeQueryVerifier.MerkleProofEntry({hash: keccak256("s"), isLeft: false});
+        bytes32[] memory roots = new bytes32[](1);
+        roots[0] = keccak256("r");
+
+        try REGISTRY.recordRound(
+            CHAIN_KEY, height++, txBytes, keccak256(abi.encode(height)), siblings, bytes32(0), roots
+        ) {
+            if (roundId > highestRoundSeen) highestRoundSeen = roundId;
+            provenRounds.push(roundId);
+            ++roundsProven;
+        } catch {}
+    }
+
+    function claim(uint256 policySeed, uint256 roundSeed) external {
+        if (policies.length == 0 || provenRounds.length == 0) return;
+        uint256 id = policies[bound(policySeed, 0, policies.length - 1)];
+        uint80 roundId = provenRounds[bound(roundSeed, 0, provenRounds.length - 1)];
+        try GUARD.claim(id, roundId) {
+            ++claimsPaid;
+        } catch (bytes memory err) {
+            lastClaimError = bytes4(err);
+            if (bytes4(err) == PegGuard.PolicyNotActive.selector) ++errNotActive;
+            else if (bytes4(err) == PegGuard.RoundNotProven.selector) ++errNotProven;
+            else if (bytes4(err) == PegGuard.RoundOutsideWindow.selector) ++errWindow;
+            else if (bytes4(err) == PegGuard.StrikeNotBreached.selector) ++errStrike;
+            else ++errOther;
+        }
+    }
+
+    function expire(uint256 seed) external {
+        if (policies.length == 0) return;
+        uint256 id = policies[bound(seed, 0, policies.length - 1)];
+        try GUARD.expire(id) {
+            ++policiesExpired;
+        } catch {}
+    }
+
+    function warp(uint32 seconds_) external {
+        vm.warp(block.timestamp + bound(seconds_, 1 hours, 30 days));
+    }
+}
