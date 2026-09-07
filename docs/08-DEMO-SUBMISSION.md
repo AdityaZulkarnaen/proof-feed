@@ -1,6 +1,28 @@
 # 08 — Demo & Submission
 
-## 1. Demo video script (≤ 3 min, screen recording, no slides except the first 10 s)
+> **Updated 2026-09-08 to match what actually shipped.** The original script assumed one branch would
+> be chosen. Both ran: the *feed import* is Branch H (the real 2023 depeg round) and the *claim* is
+> Branch L (a live ETH/USD round). §1a below is the script to record; §1 is kept as the original.
+
+## 1a. Demo video script — as built (≤ 3 min)
+
+| t | Screen | Say |
+|---|---|---|
+| 0:00 | Title card | "Every price here is a real Ethereum mainnet Chainlink transaction, cryptographically verified on Creditcoin. No relayer. No admin key can insert a number." |
+| 0:10 | Etherscan, tx `0x24500a30…acd8`, 2023-03-11 | "March 11th 2023. Silicon Valley Bank has failed and USDC has lost its peg. This is the Chainlink round that printed 88 cents." |
+| 0:25 | Terminal: `npm run pf -- demo --branch H` | Narrate the surfaces: `getProof` returns a proof with 529 continuity roots for a three-year-old block; `verifySingle` dry-run returns true. |
+| 0:50 | Blockscout, tx `0x51391915…2d06` | "`TransactionVerified` from the precompile at 0xFD2, and `RoundProven` from our registry. 628,000 gas — under one percent of a Creditcoin block. That 2023 round now lives on Creditcoin." |
+| 1:10 | `cast call $ADAPTER "getRoundData(uint80)" 36893488147419104215` | "Readable through the plain Chainlink interface. Any contract already written for Chainlink works unmodified." |
+| 1:25 | Terminal: `npm run pf -- prove --feed USDC/USD --latest` | "And the same command imports today's round. 320,000 gas." |
+| 1:45 | Blockscout: PegGuard `CoverBought` | "A treasury bought cover: pay 50 CTC if this feed prints below the strike this week." |
+| 2:00 | Terminal: `npm run pf -- claim --policy 0` | "The claim proves the breaching round and settles in one transaction. Nobody approves it." |
+| 2:20 | Blockscout: `ClaimPaid`, holder balance delta | "Paid. The round decided, not an adjuster." |
+| 2:35 | README "Limitations" | "What it does not do: prove state, prove freshness, or write back to Ethereum. It proves a round *happened* — which is exactly what a parametric claim needs. And you cannot buy cover for a depeg that already printed: cover always starts in the future. That is why the claim demo uses a live round." |
+| 2:50 | Repo + Blockscout links | End. |
+
+Rules: show real hashes; if something is cached or pre-recorded, say so on screen.
+
+## 1. Demo video script (original plan, superseded by §1a)
 
 | t | Screen | Say |
 |---|---|---|
