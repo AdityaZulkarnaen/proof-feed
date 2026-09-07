@@ -12,11 +12,11 @@ confirmed during the Day-1 spike; write the evidence back here. **[D1]** verifie
 | RPC | `https://rpc.cc3-testnet.creditcoin.network` |
 | Explorer | `https://creditcoin-testnet.blockscout.com` |
 | Native token | CTC (testnet) |
-| Faucet | see `https://docs.creditcoin.org/wallets/using-testnet-faucet` [VERIFY exact steps] |
+| Faucet | `https://docs.creditcoin.org/wallets/using-testnet-faucet` — **[D1] works**; funded `0x259559fA11C2247f3fD5E1D87be9BFA816Fd97D7` with 10,000 CTC |
 | Block Prover / Native Query Verifier precompile | `0x0000000000000000000000000000000000000FD2` (4050) |
 | ChainInfo precompile | `0x0000000000000000000000000000000000000fd3` |
-| Block gas cap (`utils.gas.MAX_GAS_CAP`) | `75_000_000` |
-| Block time | ~15 s (marketing figure; measure) |
+| Block gas cap (`utils.gas.MAX_GAS_CAP`) | `75_000_000` — **[D1] confirmed**: live block `gasLimit` is exactly 75,000,000 |
+| Block time | **[D1] measured 15.15 s** average over 200 blocks |
 | Precompile note | precompiles have no bytecode (`extcodesize == 0`) but accept calls; `NativeQueryVerifierLib.hasPrecompile()` special-cases chainIds 102030/102031/102032 |
 
 ## 2. Attestcoin Protocol on CC3 Testnet [OK unless tagged]

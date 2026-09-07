@@ -35,7 +35,8 @@ Explorer: `https://creditcoin-testnet.blockscout.com` — prefix any hash below 
 |---|---|---|---|
 | `ProvenFeedRegistry` | `0x89ab0ad8768CD06d0f3bc134ad2407705a49d309` | `0x49d8c38c12b31f73e1769379935bed6bdac25569365c44968007d3d1ff6edb8d` | yes |
 | `ProvenFeedAdapter` (USDC/USD) | `0x678C84Fe193a569FbDAF58e5f0d8f290a4072735` | `0x47b523e97bcd004e359301c900f12a029932a84d7dae2ffbc38a42b090d11ea8` | yes |
-| `PegGuard` | `0xB1aBE0D450B778fDb32Df54bb529F72d531ae8CE` | `0x70aab9e57257fa81679f4754a2be991f3107dc9d5030eabaf79b6a2072839c74` | yes |
+| `PegGuard` | `0xc836457AD046a329E93e40A4B747E90ee53B85bC` | `0x25d5faaec4fe388ae09605e4c93e75060fcc6ae5ebf911040761fc030456d0d5` | yes |
+| `PegGuard` (superseded, see below) | `0xB1aBE0D450B778fDb32Df54bb529F72d531ae8CE` | `0x70aab9e57257fa81679f4754a2be991f3107dc9d5030eabaf79b6a2072839c74` | yes |
 | `ProbeASC` (Day-1 spike only, **not** part of the demo path) | `0x846D0C55a916e925331599bf086f9B203E68917B` | `0x154a414171c8e0e210f7f5a749d885972dbaa8bf0393d01bfde8c6e4d0c6b7f3` | yes |
 
 ## Registered feeds
@@ -69,13 +70,34 @@ observed on chain).
 
 ## PegGuard lifecycle
 
+On the current `PegGuard` at `0xc836457AD046a329E93e40A4B747E90ee53B85bC`:
+
 | Step | Tx | Gas |
 |---|---|---|
-| `configurePool` USDC/USD (50 bps/30d, waiting 0, max 100 CTC) | `0xbe1e8dc0e2e4f035e79b8a9df07fccadfe560cb58fa5a97da40608d2062463d1` | 241,192 |
-| `configurePool` ETH/USD | `0x0e3c7e70b7cff917b3abb26d2ad0617b05d1c89cc8ee42cbc1745696608f6028` | — |
-| `deposit` 200 CTC (ETH/USD pool) | `0x273d8b442650a58cb2a6b81dac8523322d7375729536a50947163dae97a53f53` | 242,634 |
-| `buyCover` policy 0 — strike $2736.21, notional 50 CTC, 7 days, premium 0.0583333 CTC | `0xce91e723678fa3e829a759cb217b609f0fd35216b958e4dd9ebbcab0ad48e88d` | 192,632 |
-| `claim` / `proveAndClaim` → `ClaimPaid` | _pending — see "Claim demo" below_ | |
+| `configurePool` ETH/USD (50 bps/30d, waiting 0, max 100 CTC) | `0x1740fdc8c0b3f0c8ae6e84da3aed0caafcd1e0b7ef5962ca1b7fafef4e9f6aa7` | — |
+| `configurePool` USDC/USD | `0x3ed4bd33421b59ec88a224b027a82368e92a9ffd5a6ab44bccc8313fdf731baa` | — |
+| `deposit` 200 CTC (ETH/USD pool) | `0x709f45fa0f21d906bacbf579ef4a7b99b016c8a7d79a81a426151ca9df9d41bd` | 243,180 |
+| `buyCover` policy 0 — strike $2736.21, notional 50 CTC, 7 days, premium 0.0583333 CTC | `0x5def8f253acb9ca8df10c90f234b7aa5027f20b718dc7011b3395bef9d372657` | 192,632 |
+| `claim` / `proveAndClaim` → `ClaimPaid` | _pending — waiting for the next ETH/USD round_ | |
+
+On the superseded `PegGuard` at `0xB1aBE0D450B778fDb32Df54bb529F72d531ae8CE` (kept for history):
+`configurePool` `0xbe1e8dc0…`, `0x0e3c7e70…`; `deposit` `0x273d8b44…` (242,634 gas);
+`buyCover` `0xce91e723…` (192,632 gas).
+
+### Why PegGuard was redeployed
+
+Self-review found that `claim` reduces `pool.balance` without burning shares, so a pool can be
+drained to **exactly** zero while shares are still outstanding — and the next `deposit` then priced
+itself against a zero balance and hit `panic 0x12` (division by zero) instead of reverting cleanly.
+Reachable whenever the premium rounds to zero, which a `premiumBpsPer30d = 0` pool permits.
+
+`deposit` now reverts `PoolWipedOut(feedId)` in that state, and the worthless shares can be burned
+via `withdraw` (which pays 0), after which the pool accepts liquidity again. Regression test:
+`test_Deposit_RevertsCleanlyWhenThePoolWasFullyPaidOut` — confirmed to fail with exactly that
+`panic 0x12` when the guard is removed.
+
+The superseded instance still holds 200 CTC of testnet liquidity and one ACTIVE policy. It was left
+in place rather than drained: it is testnet CTC, and the history is worth more than the funds.
 
 ### Why the claim demo does not use the 2023 depeg round
 
@@ -103,7 +125,7 @@ So the demo splits cleanly, and the README says so plainly:
 | `recordRound` (2023 round) | 529 | **628,299** | 0.838% |
 | `recordRound` (ETH/USD, keeper) | 57 | 276,385 | 0.369% |
 | `registerFeed` | — | ~151,000 | 0.201% |
-| `deposit` | — | 242,634 | 0.324% |
+| `deposit` | — | 243,180 | 0.324% |
 | `buyCover` | — | 192,632 | 0.257% |
 
 **NFR-01 (≤ 2,000,000 gas per `recordRound`) is met with ~3× margin even on the deepest proof
@@ -126,7 +148,7 @@ Gas estimation via `eth_estimateGas` **worked on every call** — the documented
 
 ```bash
 npm ci
-cd contracts && forge test            # 89 tests, no network access
+cd contracts && forge test            # 90 tests, no network access
 cd .. && npm run test:cli             # 18 tests
 npm run pf -- spike                   # re-runs every Day-1 gate against the live network
 npm run pf -- prove --feed USDC/USD --latest

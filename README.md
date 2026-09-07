@@ -14,7 +14,7 @@ Live on **Creditcoin CC3 testnet** · BUIDL CTC 2026 Fall · track: **DeFi**
 |---|---|
 | `ProvenFeedRegistry` | [`0x89ab0ad8768CD06d0f3bc134ad2407705a49d309`](https://creditcoin-testnet.blockscout.com/address/0x89ab0ad8768CD06d0f3bc134ad2407705a49d309) |
 | `ProvenFeedAdapter` (USDC/USD) | [`0x678C84Fe193a569FbDAF58e5f0d8f290a4072735`](https://creditcoin-testnet.blockscout.com/address/0x678C84Fe193a569FbDAF58e5f0d8f290a4072735) |
-| `PegGuard` | [`0xB1aBE0D450B778fDb32Df54bb529F72d531ae8CE`](https://creditcoin-testnet.blockscout.com/address/0xB1aBE0D450B778fDb32Df54bb529F72d531ae8CE) |
+| `PegGuard` | [`0xc836457AD046a329E93e40A4B747E90ee53B85bC`](https://creditcoin-testnet.blockscout.com/address/0xc836457AD046a329E93e40A4B747E90ee53B85bC) |
 
 All source-verified on Blockscout. Every hash below is real; full log in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 
@@ -111,7 +111,7 @@ this unmodified — there is a test that does exactly that with its own locally-
 ## Reproduce in three commands
 
 ```bash
-npm ci && (cd contracts && forge test)          # 89 tests, zero network access
+npm ci && (cd contracts && forge test)          # 90 tests, zero network access
 npm run pf -- spike                             # re-runs every Day-1 gate live
 npm run pf -- prove --feed USDC/USD --latest    # prove the newest round yourself
 ```
@@ -195,7 +195,7 @@ stored.
 ## Tests
 
 ```
-contracts:  89 tests, 5 suites — forge test          (no network access)
+contracts:  90 tests, 5 suites — forge test          (no network access)
 cli:        18 tests                                  — npm run test:cli
 coverage:   98.7% of lines on src/ (233/236), excluding the Day-1 spike contract
 ```
@@ -221,6 +221,17 @@ coverage:   98.7% of lines on src/ (233/236), excluding the Day-1 spike contract
 - The PegGuard invariant suite carries ghost counters and a deterministic lifecycle test, because an
   invariant run whose handler swallows every revert can pass while doing nothing. (It did, at first.
   The counters caught it.)
+
+Two bugs found by our own review rather than by the tests, both now fixed and regression-tested:
+
+1. **`deposit` could panic instead of revert.** A claim reduces `pool.balance` without burning
+   shares, so a pool can be drained to exactly zero with shares still outstanding; the next deposit
+   then divided by that zero balance and hit `panic 0x12`. `deposit` now reverts
+   `PoolWipedOut(feedId)`, and the worthless shares can be burned via `withdraw`. The regression test
+   was verified to fail with exactly that panic when the guard is removed. PegGuard was redeployed
+   with the fix — see [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
+2. **A cold `pf watch` back-filled 20,000 blocks** and started proving all 77 historical rounds it
+   found, spending real gas. Cold-start look-back is now `--backfill`, default 300 blocks.
 
 ## Project structure
 

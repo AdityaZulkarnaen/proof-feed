@@ -42,3 +42,23 @@
 [34m[info] [0m [8] blocks 25.927.422-25.927.427: nothing new to prove
 [35m[surface][0m [1meth_getLogs(aggregator, AnswerUpdated)[0m [2m→[0m 0 logs over blocks 25.927.428-25.927.432 in 1 request(s), chunk 20000
 [34m[info] [0m [9] blocks 25.927.428-25.927.432: nothing new to prove
+[35m[surface][0m [1meth_getLogs(aggregator, AnswerUpdated)[0m [2m→[0m 0 logs over blocks 25.927.433-25.927.437 in 1 request(s), chunk 20000
+[34m[info] [0m [10] blocks 25.927.433-25.927.437: nothing new to prove
+[35m[surface][0m [1meth_getLogs(aggregator, AnswerUpdated)[0m [2m→[0m 0 logs over blocks 25.927.438-25.927.442 in 1 request(s), chunk 20000
+[34m[info] [0m [11] blocks 25.927.438-25.927.442: nothing new to prove
+[35m[surface][0m [1meth_getLogs(aggregator, AnswerUpdated)[0m [2m→[0m 0 logs over blocks 25.927.443-25.927.447 in 1 request(s), chunk 20000
+[34m[info] [0m [12] blocks 25.927.443-25.927.447: nothing new to prove
+[35m[surface][0m [1meth_getLogs(aggregator, AnswerUpdated)[0m [2m→[0m 0 logs over blocks 25.927.448-25.927.452 in 1 request(s), chunk 20000
+[34m[info] [0m [13] blocks 25.927.448-25.927.452: nothing new to prove
+[35m[surface][0m [1meth_getLogs(aggregator, AnswerUpdated)[0m [2m→[0m 0 logs over blocks 25.927.453-25.927.457 in 1 request(s), chunk 20000
+[34m[info] [0m [14] blocks 25.927.453-25.927.457: nothing new to prove
+[35m[surface][0m [1meth_getLogs(aggregator, AnswerUpdated)[0m [2m→[0m 0 logs over blocks 25.927.458-25.927.463 in 1 request(s), chunk 20000
+[34m[info] [0m [15] blocks 25.927.458-25.927.463: nothing new to prove
+[35m[surface][0m [1meth_getLogs(aggregator, AnswerUpdated)[0m [2m→[0m 0 logs over blocks 25.927.464-25.927.467 in 1 request(s), chunk 20000
+[34m[info] [0m [16] blocks 25.927.464-25.927.467: nothing new to prove
+[35m[surface][0m [1meth_getLogs(aggregator, AnswerUpdated)[0m [2m→[0m 0 logs over blocks 25.927.468-25.927.473 in 1 request(s), chunk 20000
+[34m[info] [0m [17] blocks 25.927.468-25.927.473: nothing new to prove
+[35m[surface][0m [1meth_getLogs(aggregator, AnswerUpdated)[0m [2m→[0m 0 logs over blocks 25.927.474-25.927.478 in 1 request(s), chunk 20000
+[34m[info] [0m [18] blocks 25.927.474-25.927.478: nothing new to prove
+[35m[surface][0m [1meth_getLogs(aggregator, AnswerUpdated)[0m [2m→[0m 0 logs over blocks 25.927.479-25.927.483 in 1 request(s), chunk 20000
+[34m[info] [0m [19] blocks 25.927.479-25.927.483: nothing new to prove

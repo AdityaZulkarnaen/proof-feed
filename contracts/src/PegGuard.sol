@@ -132,6 +132,8 @@ contract PegGuard is Ownable2Step, ReentrancyGuard {
     error TransferFailed(address to, uint256 amount);
     /// @notice Deposit of zero.
     error ZeroAmount();
+    /// @notice Every unit of this pool was paid out; the shares still outstanding are worthless.
+    error PoolWipedOut(bytes32 feedId);
     /// @notice No such policy id.
     error UnknownPolicy(uint256 id);
     /// @notice The registry address was zero.
@@ -174,6 +176,13 @@ contract PegGuard is Ownable2Step, ReentrancyGuard {
         if (msg.value == 0) revert ZeroAmount();
         Pool storage p = _pools[feedId];
         if (REGISTRY.getFeed(feedId).emitter == address(0)) revert UnknownFeed(feedId);
+
+        // A claim reduces `balance` without burning shares, so a pool can end up with shares
+        // outstanding and nothing behind them. Pricing a deposit against that would divide by
+        // zero and panic; refuse it with a real error instead. Those shares are worthless and
+        // their holders can burn them via `withdraw` (which pays 0), after which the pool
+        // accepts deposits again.
+        if (p.totalShares != 0 && p.balance == 0) revert PoolWipedOut(feedId);
 
         // Shares price off the pool balance BEFORE this deposit lands.
         shares = p.totalShares == 0 ? msg.value : (msg.value * p.totalShares) / p.balance;

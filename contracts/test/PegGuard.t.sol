@@ -104,6 +104,41 @@ contract PegGuardTest is BaseTest {
         assertGe(p.balance, p.locked, "INV-07 holds after withdrawal");
     }
 
+    /// @notice A claim reduces the pool balance without burning shares, so a pool can be drained to
+    ///         exactly zero while shares are still outstanding. Pricing a new deposit against that
+    ///         divides by zero. It must revert with a real error, never a panic.
+    function test_Deposit_RevertsCleanlyWhenThePoolWasFullyPaidOut() public {
+        // A zero-premium pool is what makes the balance land on exactly zero after a full payout.
+        vm.prank(owner);
+        guard.configurePool(USDC_FEED_ID, 0, WAITING_PERIOD, MAX_NOTIONAL, true);
+
+        vm.prank(lp);
+        guard.deposit{value: 50 ether}(USDC_FEED_ID);
+
+        vm.warp(DEPEG_UPDATED_AT - 1 days);
+        vm.prank(holder);
+        uint256 policyId = guard.buyCover{value: 0}(USDC_FEED_ID, STRIKE_097, 50 ether, 7);
+
+        _record(_loadFixture(FIXTURE_DEPEG));
+        guard.claim(policyId, DEPEG_ROUND_ID);
+
+        PegGuard.Pool memory p = guard.getPool(USDC_FEED_ID);
+        assertEq(p.balance, 0, "pool drained to exactly zero");
+        assertGt(p.totalShares, 0, "but shares are still outstanding");
+
+        vm.prank(lp2);
+        vm.expectRevert(abi.encodeWithSelector(PegGuard.PoolWipedOut.selector, USDC_FEED_ID));
+        guard.deposit{value: 1 ether}(USDC_FEED_ID);
+
+        // The escape hatch: burn the worthless shares, then the pool works again.
+        uint256 lpShares = guard.sharesOf(USDC_FEED_ID, lp);
+        vm.prank(lp);
+        assertEq(guard.withdraw(USDC_FEED_ID, lpShares), 0, "worthless shares redeem for nothing");
+
+        vm.prank(lp2);
+        assertEq(guard.deposit{value: 1 ether}(USDC_FEED_ID), 1 ether, "pool accepts liquidity again");
+    }
+
     function test_Withdraw_RevertsWhenBurningMoreSharesThanHeld() public {
         _seedPool(10 ether);
         vm.prank(lp2);
