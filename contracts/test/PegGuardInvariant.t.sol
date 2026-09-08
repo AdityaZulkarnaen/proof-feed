@@ -48,7 +48,11 @@ contract PegGuardInvariantTest is Test {
         assertLe(p.locked, p.balance, "locked <= balance");
     }
 
-    /// @notice The contract's actual CTC must cover every pool it accounts for.
+    /// @notice T-S08: the contract's actual CTC must cover every pool it accounts for, so a claim
+    ///         can never be reached in a state where the pool owes more than it holds. Together
+    ///         with `invariant_LockedNeverExceedsBalance` this is what makes "claim when
+    ///         balance < notional" unreachable: an ACTIVE policy's notional is always part of
+    ///         `locked`, and `locked <= balance <= address(this).balance`.
     function invariant_ContractBalanceCoversPoolAccounting() public view {
         PegGuard.Pool memory p = guard.getPool(FEED_ID);
         assertGe(address(guard).balance, p.balance, "solvent");
