@@ -67,3 +67,18 @@ Height 25933160 not yet attested and in proof builder service cache for chain ke
 Height 25933160 not yet attested and in proof builder service cache for chain key 3. Latest height: 25933150. Retrying in 15000ms...
 Height 25933160 not yet attested and in proof builder service cache for chain key 3. Latest height: 25933150. Retrying in 15000ms...
 Height 25933160 not yet attested and in proof builder service cache for chain key 3. Latest height: 25933150. Retrying in 15000ms...
+Height 25933160 not yet attested and in proof builder service cache for chain key 3. Latest height: 25933150. Retrying in 15000ms...
+Height 25933160 not yet attested and in proof builder service cache for chain key 3. Latest height: 25933150. Retrying in 15000ms...
+[35m[surface][0m [1mProofBuilder.getProof[0m [2m→[0m tx 0xa95750dc... -> header 25.933.160, txIndex 200, 8 siblings, 1 continuity roots, cached=true
+[35m[surface][0m [1mPrecompileBlockProver.verifySingle[0m [2m→[0m dry-run (eth_call, 0xFD2) -> true
+[34m[info] [0m wallet 0x259559fA11C2247f3fD5E1D87be9BFA816Fd97D7 balance 9449.813932 CTC
+[34m[info] [0m gas policy: estimateGas 292944 x1.35
+[34m[info] [0m submitted 0x3c2c128c8d3f799a0855e982e1fee05db37efe57666943a62bb79569188a3401 — https://creditcoin-testnet.blockscout.com/tx/0x3c2c128c8d3f799a0855e982e1fee05db37efe57666943a62bb79569188a3401
+[35m[surface][0m [1mProvenFeedRegistry.recordRound (on-chain)[0m [2m→[0m status 1
+[35m[surface][0m [1mINativeQueryVerifier.verifyAndEmit (on-chain, 0xFD2)[0m [2m→[0m inclusion + continuity verified inside recordRound
+[35m[surface][0m [1mEvmV1Decoder.{getTransactionType,decodeReceiptFields,getLogsByEventSignature} (on-chain)[0m [2m→[0m round decoded from the verified bytes
+[32m[ok]   [0m recordRound status 1 — 270.704 gas (0.360% of the 75,000,000 block cap)
+[34m[info] [0m   TransactionVerified from 0x0000000000000000000000000000000000000FD2: {"chainKey":"3","height":"25933160","transactionIndex":"200"}
+[34m[info] [0m   RoundProven from 0x89ab0ad8768CD06d0f3bc134ad2407705a49d309: {"feedId":"0x62ddc8c5ffbd077b5a28e92efd10abcc58e66fb2a326401f0efd02e173ac1777","roundId":"129127208515966894733","answer":"247022595207","updatedAt":"1788876719","queryId":"0x723ba781d5de784adfc2d8470a5d304516c07c16bc150aa1aac2ca2ae5d87abb","prover":"0x259559fA11C2247f3fD5E1D87be9BFA816Fd97D7"}
+[34m[info] [0m   LatestRoundUpdated from 0x89ab0ad8768CD06d0f3bc134ad2407705a49d309: {"feedId":"0x62ddc8c5ffbd077b5a28e92efd10abcc58e66fb2a326401f0efd02e173ac1777","roundId":"129127208515966894733"}
+[32m[ok]   [0m round 129127208515966894733 proven in 0x3c2c128c8d3f799a0855e982e1fee05db37efe57666943a62bb79569188a3401

@@ -14,3 +14,8 @@ web/next-env.d.ts
 # Impeccable runtime state (pids, ports); the surface brief itself is committed
 web/.impeccable/questions/
 web/tsconfig.tsbuildinfo
+
+# One package manager. npm is the tested path; a stray pnpm lockfile makes Vercel
+# pick a dependency tree nobody built against.
+pnpm-lock.yaml
+yarn.lock
