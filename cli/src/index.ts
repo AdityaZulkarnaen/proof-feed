@@ -16,6 +16,10 @@ ${colors.bold}pf${colors.reset} — ProofFeed / PegGuard CLI
                        verification transaction on CC3 testnet (gate G4).
       --skip-history   skip the 2023 depeg probe (faster; leaves G5 undecided).
 
+  ${colors.bold}pf deploy --proxy <address|USDC/USD> [--all-phases] [--dry-run] [--record]${colors.reset}
+      Deploy registry + adapter + PegGuard and register the feed (FR-17). This is the
+      path that actually works on CC3; script/Deploy.s.sol cannot run there (docs/09 Q5).
+
   ${colors.bold}pf register --proxy <address|USDC/USD> [--all-phases] [--dry-run]${colors.reset}
       Read aggregator()/phaseId()/decimals()/description() off the live Chainlink proxy
       and register the feed (FR-21). Prints the exact .env lines for the deploy script.
@@ -47,6 +51,10 @@ async function main(): Promise<number> {
     case 'spike': {
       const { spike } = await import('./commands/spike.js');
       return await spike(rest);
+    }
+    case 'deploy': {
+      const { deploy } = await import('./commands/deploy.js');
+      return await deploy(rest);
     }
     case 'register': {
       const { register } = await import('./commands/register.js');

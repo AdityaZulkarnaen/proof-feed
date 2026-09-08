@@ -1,81 +1,18 @@
 
 > proof-feed@0.1.0 pf
-> npm run --workspace proof-feed-cli pf -- watch --feed ETH/USD --interval 60
+> npm run --workspace proof-feed-cli pf -- watch --feed ETH/USD --interval 120
 
 
 > proof-feed-cli@0.1.0 pf
-> tsx src/index.ts watch --feed ETH/USD --interval 60
+> tsx src/index.ts watch --feed ETH/USD --interval 120
 
 [35m[surface][0m [1mchainlink AggregatorProxy.{aggregator,phaseId,decimals,description}[0m [2m→[0m 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419 -> "ETH / USD" phase 7, aggregator 0x7d4E742018fb52E48b08BE73d041C18B21de6Fb5, 8 decimals
 
-[1m[36m▸ watching "ETH / USD" aggregator 0x7d4E742018fb52E48b08BE73d041C18B21de6Fb5 every 60s[0m
+[1m[36m▸ watching "ETH / USD" aggregator 0x7d4E742018fb52E48b08BE73d041C18B21de6Fb5 every 120s[0m
 [34m[info] [0m this keeper has no privileges: it pays gas, the contract decides what is true
-[35m[surface][0m [1meth_getLogs(aggregator, AnswerUpdated)[0m [2m→[0m 1 logs over blocks 25.927.090-25.927.390 in 1 request(s), chunk 20000
+[35m[surface][0m [1meth_getLogs(aggregator, AnswerUpdated)[0m [2m→[0m 1 logs over blocks 25.930.707-25.931.007 in 1 request(s), chunk 20000
 
-[1m[36m▸ proving round 129127208515966894708 — 2487.46409473 at 2026-09-07T18:39:35.000Z[0m
-[35m[surface][0m [1mProofBuilder.getProof[0m [2m→[0m tx 0xf46f3302... -> header 25.927.324, txIndex 64, 9 siblings, 7 continuity roots, cached=true
-[35m[surface][0m [1mPrecompileBlockProver.verifySingle[0m [2m→[0m dry-run (eth_call, 0xFD2) -> true
-[34m[info] [0m wallet 0x259559fA11C2247f3fD5E1D87be9BFA816Fd97D7 balance 9799.937430 CTC
-[34m[info] [0m gas policy: estimateGas 298802 x1.35
-[34m[info] [0m submitted 0x7e122da1a91beaf71df35ebfdf13a57ab1cd64b3cf40880a99cde009e00faff2 — https://creditcoin-testnet.blockscout.com/tx/0x7e122da1a91beaf71df35ebfdf13a57ab1cd64b3cf40880a99cde009e00faff2
-[35m[surface][0m [1mProvenFeedRegistry.recordRound (on-chain)[0m [2m→[0m status 1
-[35m[surface][0m [1mINativeQueryVerifier.verifyAndEmit (on-chain, 0xFD2)[0m [2m→[0m inclusion + continuity verified inside recordRound
-[35m[surface][0m [1mEvmV1Decoder.{getTransactionType,decodeReceiptFields,getLogsByEventSignature} (on-chain)[0m [2m→[0m round decoded from the verified bytes
-[32m[ok]   [0m recordRound status 1 — 276.385 gas (0.360% of the 75,000,000 block cap)
-[34m[info] [0m   TransactionVerified from 0x0000000000000000000000000000000000000FD2: {"chainKey":"3","height":"25927324","transactionIndex":"64"}
-[34m[info] [0m   RoundProven from 0x89ab0ad8768CD06d0f3bc134ad2407705a49d309: {"feedId":"0x62ddc8c5ffbd077b5a28e92efd10abcc58e66fb2a326401f0efd02e173ac1777","roundId":"129127208515966894708","answer":"248746409473","updatedAt":"1788806375","queryId":"0xd23f63d9e4b8419e242ea8b76b0c403f859bb4b2ea40497e96b3765a6db78e06","prover":"0x259559fA11C2247f3fD5E1D87be9BFA816Fd97D7"}
-[34m[info] [0m   LatestRoundUpdated from 0x89ab0ad8768CD06d0f3bc134ad2407705a49d309: {"feedId":"0x62ddc8c5ffbd077b5a28e92efd10abcc58e66fb2a326401f0efd02e173ac1777","roundId":"129127208515966894708"}
-[32m[ok]   [0m round 129127208515966894708 proven in 0x7e122da1a91beaf71df35ebfdf13a57ab1cd64b3cf40880a99cde009e00faff2
-[35m[surface][0m [1meth_getLogs(aggregator, AnswerUpdated)[0m [2m→[0m 0 logs over blocks 25.927.391-25.927.396 in 1 request(s), chunk 20000
-[34m[info] [0m [2] blocks 25.927.391-25.927.396: nothing new to prove
-[35m[surface][0m [1meth_getLogs(aggregator, AnswerUpdated)[0m [2m→[0m 0 logs over blocks 25.927.397-25.927.401 in 1 request(s), chunk 20000
-[34m[info] [0m [3] blocks 25.927.397-25.927.401: nothing new to prove
-[35m[surface][0m [1meth_getLogs(aggregator, AnswerUpdated)[0m [2m→[0m 0 logs over blocks 25.927.402-25.927.406 in 1 request(s), chunk 20000
-[34m[info] [0m [4] blocks 25.927.402-25.927.406: nothing new to prove
-[35m[surface][0m [1meth_getLogs(aggregator, AnswerUpdated)[0m [2m→[0m 0 logs over blocks 25.927.407-25.927.411 in 1 request(s), chunk 20000
-[34m[info] [0m [5] blocks 25.927.407-25.927.411: nothing new to prove
-[35m[surface][0m [1meth_getLogs(aggregator, AnswerUpdated)[0m [2m→[0m 0 logs over blocks 25.927.412-25.927.416 in 1 request(s), chunk 20000
-[34m[info] [0m [6] blocks 25.927.412-25.927.416: nothing new to prove
-[35m[surface][0m [1meth_getLogs(aggregator, AnswerUpdated)[0m [2m→[0m 0 logs over blocks 25.927.417-25.927.421 in 1 request(s), chunk 20000
-[34m[info] [0m [7] blocks 25.927.417-25.927.421: nothing new to prove
-[35m[surface][0m [1meth_getLogs(aggregator, AnswerUpdated)[0m [2m→[0m 0 logs over blocks 25.927.422-25.927.427 in 1 request(s), chunk 20000
-[34m[info] [0m [8] blocks 25.927.422-25.927.427: nothing new to prove
-[35m[surface][0m [1meth_getLogs(aggregator, AnswerUpdated)[0m [2m→[0m 0 logs over blocks 25.927.428-25.927.432 in 1 request(s), chunk 20000
-[34m[info] [0m [9] blocks 25.927.428-25.927.432: nothing new to prove
-[35m[surface][0m [1meth_getLogs(aggregator, AnswerUpdated)[0m [2m→[0m 0 logs over blocks 25.927.433-25.927.437 in 1 request(s), chunk 20000
-[34m[info] [0m [10] blocks 25.927.433-25.927.437: nothing new to prove
-[35m[surface][0m [1meth_getLogs(aggregator, AnswerUpdated)[0m [2m→[0m 0 logs over blocks 25.927.438-25.927.442 in 1 request(s), chunk 20000
-[34m[info] [0m [11] blocks 25.927.438-25.927.442: nothing new to prove
-[35m[surface][0m [1meth_getLogs(aggregator, AnswerUpdated)[0m [2m→[0m 0 logs over blocks 25.927.443-25.927.447 in 1 request(s), chunk 20000
-[34m[info] [0m [12] blocks 25.927.443-25.927.447: nothing new to prove
-[35m[surface][0m [1meth_getLogs(aggregator, AnswerUpdated)[0m [2m→[0m 0 logs over blocks 25.927.448-25.927.452 in 1 request(s), chunk 20000
-[34m[info] [0m [13] blocks 25.927.448-25.927.452: nothing new to prove
-[35m[surface][0m [1meth_getLogs(aggregator, AnswerUpdated)[0m [2m→[0m 0 logs over blocks 25.927.453-25.927.457 in 1 request(s), chunk 20000
-[34m[info] [0m [14] blocks 25.927.453-25.927.457: nothing new to prove
-[35m[surface][0m [1meth_getLogs(aggregator, AnswerUpdated)[0m [2m→[0m 0 logs over blocks 25.927.458-25.927.463 in 1 request(s), chunk 20000
-[34m[info] [0m [15] blocks 25.927.458-25.927.463: nothing new to prove
-[35m[surface][0m [1meth_getLogs(aggregator, AnswerUpdated)[0m [2m→[0m 0 logs over blocks 25.927.464-25.927.467 in 1 request(s), chunk 20000
-[34m[info] [0m [16] blocks 25.927.464-25.927.467: nothing new to prove
-[35m[surface][0m [1meth_getLogs(aggregator, AnswerUpdated)[0m [2m→[0m 0 logs over blocks 25.927.468-25.927.473 in 1 request(s), chunk 20000
-[34m[info] [0m [17] blocks 25.927.468-25.927.473: nothing new to prove
-[35m[surface][0m [1meth_getLogs(aggregator, AnswerUpdated)[0m [2m→[0m 0 logs over blocks 25.927.474-25.927.478 in 1 request(s), chunk 20000
-[34m[info] [0m [18] blocks 25.927.474-25.927.478: nothing new to prove
-[35m[surface][0m [1meth_getLogs(aggregator, AnswerUpdated)[0m [2m→[0m 0 logs over blocks 25.927.479-25.927.483 in 1 request(s), chunk 20000
-[34m[info] [0m [19] blocks 25.927.479-25.927.483: nothing new to prove
-[35m[surface][0m [1meth_getLogs(aggregator, AnswerUpdated)[0m [2m→[0m 0 logs over blocks 25.927.484-25.927.488 in 1 request(s), chunk 20000
-[34m[info] [0m [20] blocks 25.927.484-25.927.488: nothing new to prove
-[35m[surface][0m [1meth_getLogs(aggregator, AnswerUpdated)[0m [2m→[0m 0 logs over blocks 25.927.489-25.927.493 in 1 request(s), chunk 20000
-[34m[info] [0m [21] blocks 25.927.489-25.927.493: nothing new to prove
-[35m[surface][0m [1meth_getLogs(aggregator, AnswerUpdated)[0m [2m→[0m 0 logs over blocks 25.927.494-25.927.498 in 1 request(s), chunk 20000
-[34m[info] [0m [22] blocks 25.927.494-25.927.498: nothing new to prove
-[35m[surface][0m [1meth_getLogs(aggregator, AnswerUpdated)[0m [2m→[0m 0 logs over blocks 25.927.499-25.927.503 in 1 request(s), chunk 20000
-[34m[info] [0m [23] blocks 25.927.499-25.927.503: nothing new to prove
-[35m[surface][0m [1meth_getLogs(aggregator, AnswerUpdated)[0m [2m→[0m 0 logs over blocks 25.927.504-25.927.508 in 1 request(s), chunk 20000
-[34m[info] [0m [24] blocks 25.927.504-25.927.508: nothing new to prove
-npm error Lifecycle script `pf` failed with error:
-npm error code 4294967295
-npm error path D:\coding\Dora\chainlink\cli
-npm error workspace proof-feed-cli@0.1.0
-npm error location D:\coding\Dora\chainlink\cli
-npm error command failed
-npm error command C:\WINDOWS\system32\cmd.exe /d /s /c tsx src/index.ts watch --feed ETH/USD --interval 60
+[1m[36m▸ proving round 129127208515966894721 — 2463.55617377 at 2026-09-08T06:54:35.000Z[0m
+[34m[info] [0m block 25.930.987 not attested yet (tip 25.930.970) — waiting
+Height 25930987 not yet attested and in proof builder service cache for chain key 3. Latest height: 25930970. Retrying in 15000ms...
+Height 25930987 not yet attested and in proof builder service cache for chain key 3. Latest height: 25930970. Retrying in 15000ms...

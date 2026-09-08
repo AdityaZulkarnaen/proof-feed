@@ -178,6 +178,25 @@ npm run pf -- spike                   # re-runs every Day-1 gate against the liv
 npm run pf -- prove --feed USDC/USD --latest
 ```
 
+## Deploy path, verified
+
+`npm run pf -- deploy --proxy USDC/USD --all-phases` deploys the whole stack in one command and
+registers the feed from values read off the live Chainlink proxy. It was executed end-to-end on CC3
+to prove the documented path actually works:
+
+| Contract | Address (verification run) | Gas |
+|---|---|---|
+| `ProvenFeedRegistry` | `0x2BC0B4A5ab33E9F0105664FA92DEAF87381BD12c` | 2,077,932 |
+| `ProvenFeedAdapter` | `0x0dCe76c6660216C1FE0D810C723A9C6eD85Ef57b` | 549,744 |
+| `PegGuard` | `0xC2763E1b76519C5808Ad502a1309E5Da35fa73Fa` | 1,517,627 |
+| 3 × `registerFeed` (phases 3, 2, 1) + `configurePool` | — | 693,966 |
+| **total** | | **4,839,269** |
+
+**This is a verification deployment, not the demo one.** The canonical addresses at the top of this
+file are what the README, the CLI defaults and the demo use, because they hold the proven rounds and
+the settled claim. The run above exists so that "here is how you deploy it" is a tested claim rather
+than an untested one.
+
 ## Known operational issues
 
 1. **`forge script` cannot run against CC3.** The node's `eth_getBlockByNumber` response omits
@@ -185,8 +204,8 @@ npm run pf -- prove --feed USDC/USD --latest
    executes — `--legacy` and `--skip-simulation` do not help, because the failure is in building the
    execution environment, not in the transaction. `forge create` and `cast send` are unaffected (they
    log the deserialization error and proceed), so the deployment used those. `script/Deploy.s.sol` is
-   kept as the documented, chain-agnostic path. This resolves docs/09 **Q5** with a different root
-   cause than the one anticipated.
+   kept as the documented, chain-agnostic path, and `npm run pf -- deploy` is the tested one. This
+   resolves docs/09 **Q5** with a different root cause than the one anticipated.
 2. **A cold `pf watch` must not back-fill.** The first implementation swept a 20,000-block window on
    startup and began proving all 77 historical ETH/USD rounds it found, spending real gas. Cold-start
    look-back is now `--backfill`, default 300 blocks (~1 h).
