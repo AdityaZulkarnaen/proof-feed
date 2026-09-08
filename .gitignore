@@ -6,3 +6,11 @@ contracts/broadcast/
 cli/.state/
 *.log
 docs/10-PENJELASAN-ID.md
+
+# Next.js (web/)
+.next/
+web/out/
+web/next-env.d.ts
+# Impeccable runtime state (pids, ports); the surface brief itself is committed
+web/.impeccable/questions/
+web/tsconfig.tsbuildinfo

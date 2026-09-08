@@ -1,0 +1,114 @@
+{
+  "title": "Choose the visual world for the ProofFeed landing page",
+  "question": "The roll assigned Station Record. Keep it, take the alternate, or re-roll.",
+  "options": [
+    {
+      "id": "assigned",
+      "label": "Station Record",
+      "kicker": "THE ROLL",
+      "lineage": "seismograph drum charts and instrument chart recorders",
+      "thesis": "A price feed is an instrument, not a claim. You cannot draw on the paper yourself: the pen is driven by the ground, exactly as no setPrice exists and every value is driven by a proven mainnet transaction. USDC ran flat at a dollar for years and then, on 2023-03-11, the pen swung to $0.88.",
+      "palette": ["#f4f1e8", "#1a1a17", "#b3402a", "#8a8578"],
+      "materials": ["chart paper", "trace ink", "red annotation pencil", "calibration ticks"],
+      "viewport": "The 2023-03-11 depeg owns the whole first screen as one instrument record: a ruled time base, the USDC trace flat at 1.00000000 then dropping to 0.88000000, the event annotated in red pencil the way a station operator marks a chart, and a station block naming the source chain, the block height and both transaction hashes.",
+      "risk": "A chart implies continuity. This feed is explicitly a lower bound with gaps, so the trace must render gaps as gaps or the world would tell exactly the lie the README spends a section correcting.",
+      "raised": [
+        { "from": "challenger-vu-meter", "raise": "Ballistic honesty: the trace plots only proven rounds at true time spacing, and unproven intervals render as gaps rather than a smoothed line the product cannot claim." },
+        { "from": "challenger-algorave", "raise": "The notation is the stage: the real AnswerUpdated topic hash and the decoded log fields are primary content, not prose describing them." },
+        { "from": "challenger-hoffmann", "raise": "The time grid never stretches. It re-counts columns per viewport and holds one tick rhythm at every width." },
+        { "from": "challenger-vertical-feed", "raise": "The 2023 record is a complete reading in the first viewport, not a hero teaser with the substance below the fold." },
+        { "from": "challenger-kiln-shelf", "raise": "Provenance rides beside the value: chain key, block height, transaction index and gas sit next to every number, never in a footnote." },
+        { "from": "challenger-cityscape", "raise": "On phones the trace, its annotations and its values unroll as synchronized lanes that stay time-aligned instead of reflowing independently." }
+      ]
+    },
+    {
+      "id": "model-pick",
+      "label": "The Tape",
+      "kicker": "IMPECCABLE'S PICK",
+      "lineage": "ticker tape and ruled ledger columns",
+      "thesis": "The feed as a running financial tape: monospace figures in ruled columns, each proven round a line, the depeg the line that breaks the run.",
+      "palette": ["#faf8f3", "#141414", "#9b2c2c"],
+      "materials": ["ruled ledger paper", "monospace figures"],
+      "viewport": "A single ruled column of proven rounds, newest first, with the 2023 line pulled out and enlarged.",
+      "risk": "Also the direction most runs in this category land on, and the one my own ranking put first. Familiar and safe; a judge has seen this page before."
+    },
+    {
+      "id": "challenger-vu-meter",
+      "label": "VU Meter Bridge",
+      "verdict": "declined",
+      "lineage": "recording-desk meter bridges",
+      "palette": ["#f0e6d2", "#141414", "#c0392b"],
+      "materials": ["meter glass", "walnut", "steel"],
+      "viewport": "A row of needles, one per feed, leaning into the red together.",
+      "case": "Loses both axes. A VU meter asserts a live present value, which is precisely what this feed cannot prove; the metaphor would contradict the product's central limitation. Audio gear is also not this audience's working world.",
+      "risk": "Would read as claiming real-time data."
+    },
+    {
+      "id": "challenger-algorave",
+      "label": "Algorave Source Floor",
+      "verdict": "declined",
+      "lineage": "live-coded music performance",
+      "palette": ["#0b0b0b", "#39ff14", "#ff00a0"],
+      "materials": ["projector black", "phosphor syntax"],
+      "viewport": "One code buffer at stage scale, the cursor line as the downbeat.",
+      "case": "Loses both axes. The product proves a past event, while a live-coding grammar is about edits taking effect on the next cycle. Developers would identify with it; judges would not.",
+      "risk": "Neon on black is the exact rut this project should avoid."
+    },
+    {
+      "id": "challenger-hoffmann",
+      "label": "Wiener Werkstatte Gridsmith",
+      "verdict": "declined",
+      "lineage": "Hoffmann square-punched metalwork",
+      "palette": ["#ffffff", "#000000", "#c8c8c8"],
+      "materials": ["lacquer black rule", "hammered silver"],
+      "viewport": "Content held inside square-punched lattice frames.",
+      "case": "Loses both axes for this audience. The lattice holds tabular data well but expresses neither proof nor time, and its nested-casket topology runs straight into the user's ban on nested containers.",
+      "risk": "Nested frames are the banned pattern wearing couture."
+    },
+    {
+      "id": "challenger-vertical-feed",
+      "label": "Vertical Feed Surface",
+      "verdict": "declined",
+      "lineage": "full-bleed vertical video feeds",
+      "palette": ["#000000", "#ffffff", "#888888"],
+      "materials": ["full-bleed media", "bottom scrim"],
+      "viewport": "One item filling the viewport, action glyphs on the right rail.",
+      "case": "Loses both axes. Judges must compare an Etherscan value against a Blockscout value, and a grammar built to show one complete item at a time actively prevents comparison. It also needs full-bleed media this project does not have.",
+      "risk": "Entertainment grammar on an evidence page."
+    },
+    {
+      "id": "challenger-kiln-shelf",
+      "label": "Fracture Glaze Shelf",
+      "verdict": "declined",
+      "lineage": "kiln shelves and glaze tests",
+      "palette": ["#f2f0eb", "#1c3f94", "#0e2a6b"],
+      "materials": ["kiln shelf", "cobalt glaze"],
+      "viewport": "A row of glaze samples, gravity setting the reading order.",
+      "case": "Loses both axes. Ceramics is far from this audience's working world, and flow-arrest-pool has no honest mapping onto cryptographic verification.",
+      "risk": "Metaphor with no load-bearing connection to the mechanism."
+    },
+    {
+      "id": "challenger-cityscape",
+      "label": "Rain-Night Cityscape",
+      "verdict": "declined",
+      "lineage": "blue-hour urban nocturne",
+      "palette": ["#0a1633", "#e8a13c", "#c0c8d8"],
+      "materials": ["wet asphalt", "neon", "reflections"],
+      "viewport": "Skyline, street canyon and river reflection as synchronized night bands.",
+      "case": "Loses both axes, and is disqualified besides: cobalt-and-neon with wet reflections is the crypto-landing-page rut the brief explicitly bans, glow included.",
+      "risk": "Directly violates the user's stated constraint."
+    }
+  ],
+  "canonCard": {
+    "id": "canon",
+    "label": "The Category Standard",
+    "kicker": "THE CANON",
+    "lineage": "contemporary crypto infrastructure landing pages",
+    "thesis": "Near-black ground, one neon accent, a hero claim about trustless infrastructure, three feature cards, a gradient glow behind the fold.",
+    "palette": ["#0d0d12", "#00e5a0", "#1a1a24"],
+    "materials": ["glass panels", "gradient glow"],
+    "viewport": "Centered hero claim, subhead, two buttons, three feature cards below.",
+    "risk": "Played straight it is competent and instantly legible to a judge. It is also the page the user named as the thing to avoid, and it would make this project look like every other submission."
+  },
+  "reroll": { "enabled": true, "steer": true, "registers": ["plain", "safer", "bolder"] }
+}

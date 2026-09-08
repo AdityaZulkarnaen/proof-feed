@@ -1,0 +1,272 @@
+/*
+ * Station Record — the smoked-drum world.
+ *
+ * A seismograph drum is soot-blackened paper; the stylus scratches a bone-white line through the
+ * soot. You cannot draw on it yourself, which is the whole argument of this product. Nothing here
+ * glows: the ink is a matte scratch, not a light source.
+ */
+
+:root {
+  /* Ground: soot with a warm brown undertone, never neutral black. */
+  --soot: #14110e;
+  --soot-raised: #1b1712;
+  --grid: #2b251e;
+  --grid-strong: #3b332a;
+
+  /* The stylus. Bone white, the only working ink. */
+  --scratch: #f2ede1;
+  --scratch-dim: #9a9082;
+  --scratch-faint: #6b6357;
+
+  /* The annotation. Sulphur amber — the varnish used to fix a smoked record. */
+  --amber: #d9a441;
+  --amber-dim: #8a6a2c;
+
+  --measure: 68ch;
+  --rule: 1px solid var(--grid);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--soot);
+  color: var(--scratch);
+  font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Browser surfaces belong to the design system too. */
+::selection {
+  background: var(--amber);
+  color: var(--soot);
+}
+
+:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 3px;
+}
+
+* {
+  scrollbar-color: var(--grid-strong) var(--soot);
+  scrollbar-width: thin;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--soot);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--grid-strong);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scratch-faint);
+}
+
+a {
+  color: inherit;
+  text-decoration-color: var(--scratch-faint);
+  text-underline-offset: 0.22em;
+  text-decoration-thickness: 1px;
+  transition: text-decoration-color 120ms ease-out, color 120ms ease-out;
+}
+
+a:hover {
+  color: var(--amber);
+  text-decoration-color: var(--amber);
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-label), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+  margin: 0;
+}
+
+p {
+  margin: 0;
+  max-width: var(--measure);
+}
+
+/* ── Station labels: the small stamped text on an instrument record ───────────────────────── */
+
+.stationLabel {
+  font-family: var(--font-label), sans-serif;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--scratch-dim);
+}
+
+.hash {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.8125rem;
+  letter-spacing: -0.01em;
+  word-break: break-all;
+}
+
+.reading {
+  font-family: var(--font-label), sans-serif;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+  font-weight: 600;
+}
+
+/* ── The drum: one continuous printed sheet, ruled by its own time base ───────────────────── */
+
+.drum {
+  position: relative;
+  background: var(--soot-raised);
+  border-block: var(--rule);
+}
+
+.trace {
+  fill: none;
+  stroke: var(--scratch);
+  stroke-width: 1.25;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.gridline {
+  stroke: var(--grid);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.gridlineStrong {
+  stroke: var(--grid-strong);
+}
+
+.annotation {
+  stroke: var(--amber);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+/*
+ * The one authored moment: the stylus lays the trace down once, the way a drum recorder does.
+ * Reduced-motion users get the finished record immediately, and so does the narrow drum.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .traceAnimated {
+    stroke-dasharray: var(--trace-length);
+    stroke-dashoffset: var(--trace-length);
+    animation: scratch 2600ms cubic-bezier(0.16, 1, 0.3, 1) 180ms forwards;
+  }
+}
+
+@keyframes scratch {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* ── Ruled rows: the record's own annotation lines, never cards ───────────────────────────── */
+
+.rows {
+  border-top: var(--rule);
+}
+
+.row {
+  display: grid;
+  gap: 0.25rem 2rem;
+  padding: 1.125rem 0;
+  border-bottom: var(--rule);
+  align-items: baseline;
+}
+
+@media (min-width: 46rem) {
+  .row {
+    grid-template-columns: 13rem 1fr;
+  }
+}
+
+.rowValue {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.25rem;
+  align-items: baseline;
+}
+
+/* ── Layout ───────────────────────────────────────────────────────────────────────────────── */
+
+.shell {
+  max-width: 78rem;
+  margin-inline: auto;
+  padding-inline: clamp(1.25rem, 4vw, 3.5rem);
+}
+
+.section {
+  padding-block: clamp(3.5rem, 7vw, 6rem);
+  border-top: var(--rule);
+}
+
+.sectionHead {
+  display: grid;
+  gap: 0.75rem;
+  margin-bottom: 2.5rem;
+}
+
+.prose {
+  display: grid;
+  gap: 1.125rem;
+  color: var(--scratch-dim);
+  max-width: var(--measure);
+}
+
+.prose strong {
+  color: var(--scratch);
+  font-weight: 600;
+}
+
+/* ── Drum viewport switch ─────────────────────────────────────────────────────────────────── */
+
+/*
+ * SVG type scales with its viewBox, so a single wide drum on a phone would set its labels at about
+ * three pixels. Two geometries are rendered and one is shown; the grid re-counts its columns rather
+ * than squeezing them.
+ */
+.onlyWide {
+  display: none;
+}
+.onlyNarrow {
+  display: block;
+}
+
+@media (min-width: 46rem) {
+  .onlyWide {
+    display: block;
+  }
+  .onlyNarrow {
+    display: none;
+  }
+}
+
+.drumCaption {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 2rem;
+  padding: 0.875rem clamp(1rem, 3vw, 1.75rem);
+  border-top: var(--rule);
+}
