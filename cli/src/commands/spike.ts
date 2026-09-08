@@ -11,7 +11,7 @@
  */
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
-import { Interface } from 'ethers';
+import { Contract, Interface } from 'ethers';
 import {
   computeTxIndex,
   dryRun,
@@ -488,6 +488,33 @@ export async function spike(argv: readonly string[]): Promise<number> {
       const probe = attach(artifact, probeAddress, wallet);
       const args = toProofArgs(proof);
       const iface = new Interface(artifact.abi as never);
+
+      // Pre-flight. `ASCBase` stores `processedQueries[queryId] = true` only AFTER
+      // `verifyAndEmit` has returned true, so a "Query already processed" revert is itself
+      // evidence that this probe verified this exact proof on chain in an earlier run. Treat it
+      // as a pass rather than failing a gate that has demonstrably already succeeded — otherwise
+      // `pf spike --submit` could only ever be run once per round.
+      try {
+        await (probe as Contract).execute!.staticCall(0, ...args);
+      } catch (err) {
+        const msg = errMessage(err);
+        if (msg.includes('Query already processed')) {
+          log.ok('this proof was already verified on chain by this probe in an earlier run');
+          log.info('  processedQueries[queryId] is set, which only happens after verifyAndEmit returned true');
+          g4 = true;
+          report.probe = { ...(report.probe as object), alreadyProcessed: true };
+          gates.push({
+            id: 'G4',
+            name: 'ProbeASC.execute emits TransactionVerified + Probe',
+            pass: true,
+            detail: 'proof already processed by this probe on chain (idempotent re-run)',
+          });
+          return finish(report, gates);
+        }
+        log.error(`probe pre-flight failed: ${msg}`);
+        throw err;
+      }
+
       const data = iface.encodeFunctionData('execute', [0, ...args]);
       const gas = await computeGasLimit(wallet.provider as never, { to: probeAddress, data, from: wallet.address }, proof.continuityProof.roots.length);
       log.info(`gas policy: ${gas.note} -> gasLimit ${gas.gasLimit.toLocaleString()}`);
@@ -530,7 +557,11 @@ export async function spike(argv: readonly string[]): Promise<number> {
           : 'see error above',
   });
 
-  // ── Report ────────────────────────────────────────────────────────────────────────────────────
+  return finish(report, gates);
+}
+
+/** Print the gate table, write docs/spike-output.json, and pick the exit code (docs/04 §6). */
+function finish(report: SpikeReport, gates: Gate[]): number {
   const blocking = gates.filter((g) => ['G1', 'G2', 'G3a', 'G3b'].includes(g.id));
   const allBlockingPass = blocking.every((g) => g.pass === true);
   report.exitCode = allBlockingPass ? 0 : gates.find((g) => g.id === 'G3b')?.pass === false ? 2 : 1;

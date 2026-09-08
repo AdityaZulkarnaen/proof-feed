@@ -1,18 +1,18 @@
 {
-  "ranAt": "2026-09-07T18:35:38.264Z",
+  "ranAt": "2026-09-08T07:11:52.613Z",
   "sourceChainKey": 3,
   "prover": {
     "candidateA": {
       "url": "https://prover.cc3-testnet.creditcoin.network",
       "ok": true,
       "status": 200,
-      "body": "{\"status\":\"healthy\",\"cc3_rpc_connected\":true,\"eth_rpc_connected\":true,\"uptime_seconds\":516280}"
+      "body": "{\"status\":\"healthy\",\"cc3_rpc_connected\":true,\"eth_rpc_connected\":true,\"uptime_seconds\":561653}"
     },
     "candidateB": {
       "url": "https://proof-gen-api.cc3-testnet.creditcoin.network",
       "ok": true,
       "status": 200,
-      "body": "{\"status\":\"healthy\",\"cc3_rpc_connected\":true,\"eth_rpc_connected\":true,\"uptime_seconds\":516280}"
+      "body": "{\"status\":\"healthy\",\"cc3_rpc_connected\":true,\"eth_rpc_connected\":true,\"uptime_seconds\":561653}"
     },
     "selected": "https://prover.cc3-testnet.creditcoin.network"
   },
@@ -33,10 +33,10 @@
     ]
   },
   "attestation": {
-    "attestedHeight": 25927260,
-    "sourceHead": 25927304,
-    "lagBlocks": 44,
-    "lagMinutes": 8.8,
+    "attestedHeight": 25931040,
+    "sourceHead": 25931076,
+    "lagBlocks": 36,
+    "lagMinutes": 7.2,
     "isAttestation": true
   },
   "feed": {
@@ -46,11 +46,19 @@
     "decimals": 8,
     "description": "USDC / USD",
     "feedId": "0xb45d52f2002a2abc1f204eb800af7cbf074250de1f754f35254efca06f7b3256",
-    "scannedFrom": 25907304,
-    "scannedTo": 25927304,
-    "answerUpdatedCount": 6,
+    "scannedFrom": 25911076,
+    "scannedTo": 25931076,
+    "answerUpdatedCount": 5,
     "newTransmissionCount": -1,
     "sample": [
+      {
+        "txHash": "0x9b6e0cdf97441ec148748b8c913fd8920f6e2c883b6ded3b7548b4e3f7293c4e",
+        "blockNumber": 25931019,
+        "answer": "99986964",
+        "aggregatorRoundId": "1179",
+        "updatedAt": "1788850859",
+        "composedRoundId": "55340232221128656027"
+      },
       {
         "txHash": "0x17e282ab446e6df3ac984046c5e17dbc0d47f4967842e2819b23fb91f85fc3ca",
         "blockNumber": 25924144,
@@ -82,34 +90,59 @@
         "aggregatorRoundId": "1175",
         "updatedAt": "1788678047",
         "composedRoundId": "55340232221128656023"
-      },
-      {
-        "txHash": "0x208ea92c4db5a9aaf6dd647d3b14a6c76849131ab8de72a8e44f5d1dff46b1aa",
-        "blockNumber": 25909794,
-        "answer": "99985930",
-        "aggregatorRoundId": "1174",
-        "updatedAt": "1788595235",
-        "composedRoundId": "55340232221128656022"
       }
     ]
   },
   "proof": {
-    "txHash": "0x17e282ab446e6df3ac984046c5e17dbc0d47f4967842e2819b23fb91f85fc3ca",
-    "headerNumber": 25924144,
-    "txIndex": 165,
+    "txHash": "0x9b6e0cdf97441ec148748b8c913fd8920f6e2c883b6ded3b7548b4e3f7293c4e",
+    "headerNumber": 25931019,
+    "txIndex": 66,
     "txBytesLength": 4544,
     "siblings": 9,
-    "continuityRoots": 57,
+    "continuityRoots": 2,
     "cached": true,
     "dryRunOk": true
   },
-  "historical": null,
+  "historical": {
+    "windowFrom": 16801144,
+    "windowTo": 16808258,
+    "scanned": [
+      {
+        "phaseId": 1,
+        "aggregator": "0x3B15a92872435C01c27201AAe0968839fB45217D",
+        "logs": 0
+      },
+      {
+        "phaseId": 2,
+        "aggregator": "0x789190466E21a8b78b8027866CBBDc151542A26C",
+        "logs": 243
+      },
+      {
+        "phaseId": 3,
+        "aggregator": "0xc9E1a09622afdB659913fefE800fEaE5DBbFe9d7",
+        "logs": 0
+      }
+    ],
+    "txHash": "0x24500a30910fb1a99de3c13eacb4e4dd05334e4078615dcf276c58dcfbddacd8",
+    "blockNumber": 16803472,
+    "phaseId": 2,
+    "aggregator": "0x789190466E21a8b78b8027866CBBDc151542A26C",
+    "aggregatorRoundId": "983",
+    "roundId": "36893488147419104215",
+    "answer": "88000000",
+    "answerFormatted": "$0.88000000",
+    "updatedAt": "2023-03-11T07:51:23.000Z",
+    "proofOk": true,
+    "dryRunOk": true,
+    "continuityRoots": 529,
+    "siblings": 7,
+    "txBytesLength": 4192,
+    "elapsedSeconds": 18
+  },
   "probe": {
     "address": "0x846D0C55a916e925331599bf086f9B203E68917B",
-    "deployTx": "0x154a414171c8e0e210f7f5a749d885972dbaa8bf0393d01bfde8c6e4d0c6b7f3",
-    "deployGas": "1022928",
-    "executeTx": "0x762ff020fc7221188e6be01ecf03e651574f3350e611944c474e3b9b63a6466d",
-    "gasUsed": "182238",
+    "executeTx": "0x9a842b4ef2dceb5b1940625109cee52483c28e3bd6c277b1cf3dad7abff64804",
+    "gasUsed": "157598",
     "status": 1,
     "events": [
       {
@@ -117,8 +150,8 @@
         "address": "0x0000000000000000000000000000000000000FD2",
         "args": {
           "chainKey": "3",
-          "height": "25924144",
-          "transactionIndex": "165"
+          "height": "25931019",
+          "transactionIndex": "66"
         }
       },
       {
@@ -126,17 +159,17 @@
         "address": "0x846D0C55a916e925331599bf086f9B203E68917B",
         "args": {
           "emitter": "0xc9E1a09622afdB659913fefE800fEaE5DBbFe9d7",
-          "answer": "99988765",
-          "aggRound": "1178",
-          "updatedAt": "1788768023",
-          "queryId": "0x2db4ceaa704ba7daba2be714668589a4ec84d55d707f681fa7176d85eba22aa4"
+          "answer": "99986964",
+          "aggRound": "1179",
+          "updatedAt": "1788850859",
+          "queryId": "0xc5eeb83edf123b2522d41c001666fb1e0701ac50419ea3ee289a418f35f11708"
         }
       },
       {
         "name": "ProbeSummary",
         "address": "0x846D0C55a916e925331599bf086f9B203E68917B",
         "args": {
-          "queryId": "0x2db4ceaa704ba7daba2be714668589a4ec84d55d707f681fa7176d85eba22aa4",
+          "queryId": "0xc5eeb83edf123b2522d41c001666fb1e0701ac50419ea3ee289a418f35f11708",
           "txType": "2",
           "receiptStatus": "1",
           "totalLogs": "3",
@@ -155,34 +188,34 @@
     {
       "id": "G5",
       "name": "historical depth (Branch H vs L)",
-      "pass": false,
-      "detail": "genesis 0, depeg height attested=true, history probe skipped -> Branch L"
+      "pass": true,
+      "detail": "depeg round $0.88000000 proven-able: getProof=true dryRun=true -> Branch H"
     },
     {
       "id": "G2",
       "name": "attestation lag < 120 min",
       "pass": true,
-      "detail": "44 blocks ~= 8.8 min behind head"
+      "detail": "36 blocks ~= 7.2 min behind head"
     },
     {
       "id": "G3a",
       "name": ">=1 AnswerUpdated log from current aggregator",
       "pass": true,
-      "detail": "6 logs from 0xc9E1a09622afdB659913fefE800fEaE5DBbFe9d7 in the last 20.000 blocks"
+      "detail": "5 logs from 0xc9E1a09622afdB659913fefE800fEaE5DBbFe9d7 in the last 20.000 blocks"
     },
     {
       "id": "G3b",
       "name": "getProof + verifySingle dry-run == true",
       "pass": true,
-      "detail": "header 25.924.144, 57 continuity roots, dryRun=true"
+      "detail": "header 25.931.019, 2 continuity roots, dryRun=true"
     },
     {
       "id": "G4",
       "name": "ProbeASC.execute emits TransactionVerified + Probe",
       "pass": true,
-      "detail": "tx 0x762ff020fc7221188e6be01ecf03e651574f3350e611944c474e3b9b63a6466d gas 182238"
+      "detail": "tx 0x9a842b4ef2dceb5b1940625109cee52483c28e3bd6c277b1cf3dad7abff64804 gas 157598"
     }
   ],
-  "branch": "L",
+  "branch": "H",
   "exitCode": 0
 }

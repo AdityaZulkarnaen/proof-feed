@@ -44,3 +44,9 @@ Height 25930987 not yet attested and in proof builder service cache for chain ke
 [32m[ok]   [0m round 129127208515966894721 proven in 0x12aa7d4527ae97f36b5f747e0e6088d3607b5fc6187ea06d1e35cc3f5749239e
 [35m[surface][0m [1meth_getLogs(aggregator, AnswerUpdated)[0m [2m→[0m 0 logs over blocks 25.931.008-25.931.039 in 1 request(s), chunk 20000
 [34m[info] [0m [2] blocks 25.931.008-25.931.039: nothing new to prove
+[35m[surface][0m [1meth_getLogs(aggregator, AnswerUpdated)[0m [2m→[0m 0 logs over blocks 25.931.040-25.931.049 in 1 request(s), chunk 20000
+[34m[info] [0m [3] blocks 25.931.040-25.931.049: nothing new to prove
+[35m[surface][0m [1meth_getLogs(aggregator, AnswerUpdated)[0m [2m→[0m 0 logs over blocks 25.931.050-25.931.058 in 1 request(s), chunk 20000
+[34m[info] [0m [4] blocks 25.931.050-25.931.058: nothing new to prove
+[35m[surface][0m [1meth_getLogs(aggregator, AnswerUpdated)[0m [2m→[0m 0 logs over blocks 25.931.059-25.931.068 in 1 request(s), chunk 20000
+[34m[info] [0m [5] blocks 25.931.059-25.931.068: nothing new to prove
