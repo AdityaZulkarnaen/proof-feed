@@ -14,7 +14,7 @@ Live on **Creditcoin CC3 testnet** · BUIDL CTC 2026 Fall · track: **DeFi**
 |---|---|
 | `ProvenFeedRegistry` | [`0x89ab0ad8768CD06d0f3bc134ad2407705a49d309`](https://creditcoin-testnet.blockscout.com/address/0x89ab0ad8768CD06d0f3bc134ad2407705a49d309) |
 | `ProvenFeedAdapter` (USDC/USD) | [`0x678C84Fe193a569FbDAF58e5f0d8f290a4072735`](https://creditcoin-testnet.blockscout.com/address/0x678C84Fe193a569FbDAF58e5f0d8f290a4072735) |
-| `PegGuard` | [`0xc836457AD046a329E93e40A4B747E90ee53B85bC`](https://creditcoin-testnet.blockscout.com/address/0xc836457AD046a329E93e40A4B747E90ee53B85bC) |
+| `PegGuard` | [`0x367693043C3E8396252728cAEBfBAB3fF43c78d5`](https://creditcoin-testnet.blockscout.com/address/0x367693043C3E8396252728cAEBfBAB3fF43c78d5) |
 
 All source-verified on Blockscout. Every hash below is real; full log in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 

@@ -174,6 +174,8 @@ export default async function Page() {
             PegGuard is parametric cover built on this feed. Policy {CLAIM.policyId} paid{' '}
             {CLAIM.notionalCtc} CTC because a Chainlink round printed below its strike — proved and
             settled in one Creditcoin transaction, with no adjuster and no admin key in the path.
+            A share of every premium is escrowed and paid to whoever proved that round, so running
+            the keeper the feed depends on is worth someone&rsquo;s gas.
           </p>
         </div>
 
@@ -210,12 +212,25 @@ export default async function Page() {
             </span>
           </Row>
           {state.policy && (
-            <Row label="Policy state">
-              <span className="reading" style={{ fontSize: '1.125rem' }}>{state.policy.status}</span>
-              <span className="stationLabel">
-                pool holds {ctc(state.policy.poolBalanceWei, 6)} CTC · {ctc(state.policy.poolLockedWei, 0)} locked
-              </span>
-            </Row>
+            <>
+              <Row label="Policy state">
+                <span className="reading" style={{ fontSize: '1.125rem' }}>{state.policy.status}</span>
+                <span className="stationLabel">
+                  pool holds {ctc(state.policy.poolBalanceWei, 6)} CTC · {ctc(state.policy.poolLockedWei, 0)} locked
+                </span>
+              </Row>
+              <Row label="Prover bounty">
+                <span className="reading" style={{ fontSize: '1.125rem' }}>
+                  {(state.policy.proverBountyBps / 100).toFixed(0)}%
+                </span>
+                <span className="stationLabel">
+                  of every premium, escrowed for whoever proves the breaching round
+                </span>
+                <span className="stationLabel">
+                  {ctc(state.policy.bountyEscrowWei, 6)} CTC held in escrow now
+                </span>
+              </Row>
+            </>
           )}
         </div>
       </section>

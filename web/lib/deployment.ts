@@ -23,7 +23,7 @@ export const SOURCE_CHAIN = {
 export const CONTRACTS = {
   registry: '0x89ab0ad8768CD06d0f3bc134ad2407705a49d309',
   adapter: '0x678C84Fe193a569FbDAF58e5f0d8f290a4072735',
-  pegGuard: '0xc836457AD046a329E93e40A4B747E90ee53B85bC',
+  pegGuard: '0x367693043C3E8396252728cAEBfBAB3fF43c78d5',
   /** The Block Prover / Native Query Verifier precompile. */
   verifier: '0x0000000000000000000000000000000000000FD2',
 } as const;

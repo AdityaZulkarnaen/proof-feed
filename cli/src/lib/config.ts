@@ -21,7 +21,7 @@ if (existsSync(envPath)) loadDotenv({ path: envPath, quiet: true });
 export const DEPLOYED = {
   registry: '0x89ab0ad8768CD06d0f3bc134ad2407705a49d309',
   adapter: '0x678C84Fe193a569FbDAF58e5f0d8f290a4072735',
-  pegGuard: '0xc836457AD046a329E93e40A4B747E90ee53B85bC',
+  pegGuard: '0x367693043C3E8396252728cAEBfBAB3fF43c78d5',
   probe: '0x846D0C55a916e925331599bf086f9B203E68917B',
 } as const;
 
@@ -61,6 +61,7 @@ export interface Config {
   ethMainnetRpcUrl: string;
   ethSepoliaRpcUrl: string;
   feedProxyUsdcUsd: string;
+  feedProxyUsdtUsd: string;
   feedProxyEthUsd: string;
   probeAddress: string;
   registryAddress: string;
@@ -79,6 +80,7 @@ export function loadConfig(): Config {
     ethMainnetRpcUrl: str('ETH_MAINNET_RPC_URL', 'https://gateway.tenderly.co/public/mainnet'),
     ethSepoliaRpcUrl: optional('ETH_SEPOLIA_RPC_URL', 'https://ethereum-sepolia-rpc.publicnode.com'),
     feedProxyUsdcUsd: str('FEED_PROXY_USDC_USD', '0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6'),
+    feedProxyUsdtUsd: str('FEED_PROXY_USDT_USD', '0x3E7d1eAB13ad0104d2750B8863b489D65364e32D'),
     feedProxyEthUsd: str('FEED_PROXY_ETH_USD', '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419'),
     // The live CC3-testnet deployment is the default, so a fresh clone with no .env can read the
     // registry, run `pf demo`, and confirm a round is already proven without any setup. These are
@@ -107,10 +109,15 @@ export function proxyForFeed(cfg: Config, feed: string): string {
   switch (key) {
     case 'USDCUSD':
       return cfg.feedProxyUsdcUsd;
+    case 'USDTUSD':
+      return cfg.feedProxyUsdtUsd;
     case 'ETHUSD':
       return cfg.feedProxyEthUsd;
     default:
       if (/^0x[0-9a-fA-F]{40}$/.test(feed)) return feed;
-      throw new ConfigError('--feed', `Unknown feed "${feed}". Use USDC/USD, ETH/USD, or a proxy address.`);
+      throw new ConfigError(
+        '--feed',
+        `Unknown feed "${feed}". Use USDC/USD, USDT/USD, ETH/USD, or a proxy address.`,
+      );
   }
 }

@@ -106,7 +106,7 @@ Four events in one transaction: `TransactionVerified` → `RoundProven` → `Lat
 | Repo | https://github.com/AdityaZulkarnaen/proof-feed |
 | Registry | https://creditcoin-testnet.blockscout.com/address/0x89ab0ad8768CD06d0f3bc134ad2407705a49d309 |
 | Adapter | https://creditcoin-testnet.blockscout.com/address/0x678C84Fe193a569FbDAF58e5f0d8f290a4072735 |
-| PegGuard | https://creditcoin-testnet.blockscout.com/address/0xc836457AD046a329E93e40A4B747E90ee53B85bC |
+| PegGuard | https://creditcoin-testnet.blockscout.com/address/0x367693043C3E8396252728cAEBfBAB3fF43c78d5 |
 | 2023 depeg proven | https://creditcoin-testnet.blockscout.com/tx/0x51391915f812b640d8eafafdfd44205777d37d12d33c7319c9dc467b0f912d06 |
 | Claim paid | https://creditcoin-testnet.blockscout.com/tx/0xb90dda642a3e77ab296ffdc0dd4521e6225b2653a301dc162123ac0a3776e39c |
 | Source depeg tx (Etherscan) | https://etherscan.io/tx/0x24500a30910fb1a99de3c13eacb4e4dd05334e4078615dcf276c58dcfbddacd8 |

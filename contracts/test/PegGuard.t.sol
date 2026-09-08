@@ -21,12 +21,13 @@ contract PegGuardTest is BaseTest {
     uint32 internal constant WAITING_PERIOD = 0; // demo setting (D-06)
     uint128 internal constant MAX_NOTIONAL = 100 ether;
     int256 internal constant STRIKE_097 = 97_000_000; // $0.97 on an 8-decimal feed
+    uint16 internal constant BOUNTY_BPS = 2_000; // 20% of the premium goes to the prover (FR-20)
 
     function setUp() public override {
         super.setUp();
         guard = new PegGuard(IProvenFeedRegistry(address(registry)), owner);
         vm.prank(owner);
-        guard.configurePool(USDC_FEED_ID, PREMIUM_BPS_30D, WAITING_PERIOD, MAX_NOTIONAL, true);
+        guard.configurePool(USDC_FEED_ID, PREMIUM_BPS_30D, WAITING_PERIOD, MAX_NOTIONAL, true, BOUNTY_BPS);
 
         vm.deal(lp, 1000 ether);
         vm.deal(lp2, 1000 ether);
@@ -58,11 +59,17 @@ contract PegGuardTest is BaseTest {
         _buyCover(50 ether, 30);
 
         uint256 premium = guard.quote(USDC_FEED_ID, 50 ether, 30);
+        uint256 bounty = guard.quoteBounty(USDC_FEED_ID, 50 ether, 30);
         vm.prank(lp2);
         uint256 s2 = guard.deposit{value: 100 ether}(USDC_FEED_ID);
 
-        // 100 CTC now buys fewer shares, because the pool is worth 200 + premium.
-        assertEq(s2, (100 ether * 200 ether) / (200 ether + premium), "diluted by accrued premium");
+        // 100 CTC now buys fewer shares, because the pool is worth 200 plus the premium it kept.
+        // The escrowed bounty never enters the pool, so it does not dilute anyone.
+        assertEq(
+            s2,
+            (100 ether * 200 ether) / (200 ether + premium - bounty),
+            "diluted by the premium the pool actually kept"
+        );
         assertLt(s2, 100 ether, "later LPs get fewer shares per CTC");
     }
 
@@ -85,17 +92,19 @@ contract PegGuardTest is BaseTest {
         _buyCover(90 ether, 30);
 
         uint256 premium = guard.quote(USDC_FEED_ID, 90 ether, 30);
-        uint256 free = 200 ether + premium - 90 ether;
+        uint256 bounty = guard.quoteBounty(USDC_FEED_ID, 90 ether, 30);
+        uint256 poolPremium = premium - bounty;
+        uint256 free = 200 ether + poolPremium - 90 ether;
 
         // Asking for all shares would pull more than the free liquidity.
         vm.prank(lp);
         vm.expectRevert(
-            abi.encodeWithSelector(PegGuard.InsufficientLiquidity.selector, free, 200 ether + premium)
+            abi.encodeWithSelector(PegGuard.InsufficientLiquidity.selector, free, 200 ether + poolPremium)
         );
         guard.withdraw(USDC_FEED_ID, 200 ether);
 
         // Withdrawing only the free part succeeds.
-        uint256 shares = (free * 200 ether) / (200 ether + premium);
+        uint256 shares = (free * 200 ether) / (200 ether + poolPremium);
         vm.prank(lp);
         uint256 got = guard.withdraw(USDC_FEED_ID, shares);
         assertLe(got, free, "never more than the free liquidity");
@@ -110,7 +119,7 @@ contract PegGuardTest is BaseTest {
     function test_Deposit_RevertsCleanlyWhenThePoolWasFullyPaidOut() public {
         // A zero-premium pool is what makes the balance land on exactly zero after a full payout.
         vm.prank(owner);
-        guard.configurePool(USDC_FEED_ID, 0, WAITING_PERIOD, MAX_NOTIONAL, true);
+        guard.configurePool(USDC_FEED_ID, 0, WAITING_PERIOD, MAX_NOTIONAL, true, 0);
 
         vm.prank(lp);
         guard.deposit{value: 50 ether}(USDC_FEED_ID);
@@ -186,7 +195,14 @@ contract PegGuardTest is BaseTest {
         assertEq(p.expiry, p.start + 7 days, "expiry");
 
         assertEq(guard.getPool(USDC_FEED_ID).locked, 50 ether, "notional locked");
-        assertEq(guard.available(USDC_FEED_ID), 200 ether + p.premiumPaid - 50 ether, "capacity reduced");
+        // FR-20: the prover bounty is carved out of the premium and escrowed, so it is not pool
+        // capacity. Only the remainder underwrites.
+        uint256 bounty = guard.quoteBounty(USDC_FEED_ID, 50 ether, 7);
+        assertEq(
+            guard.available(USDC_FEED_ID),
+            200 ether + p.premiumPaid - bounty - 50 ether,
+            "capacity reduced by the notional, and by the escrowed bounty"
+        );
     }
 
     /// T-P05
@@ -210,7 +226,7 @@ contract PegGuardTest is BaseTest {
     function test_BuyCover_RevertsWhenPoolInactive() public {
         _seedPool(200 ether);
         vm.prank(owner);
-        guard.configurePool(USDC_FEED_ID, PREMIUM_BPS_30D, WAITING_PERIOD, MAX_NOTIONAL, false);
+        guard.configurePool(USDC_FEED_ID, PREMIUM_BPS_30D, WAITING_PERIOD, MAX_NOTIONAL, false, BOUNTY_BPS);
         vm.prank(holder);
         vm.expectRevert(abi.encodeWithSelector(PegGuard.PoolInactive.selector, USDC_FEED_ID));
         guard.buyCover{value: 1 ether}(USDC_FEED_ID, STRIKE_097, 50 ether, 7);
@@ -242,12 +258,12 @@ contract PegGuardTest is BaseTest {
     function test_ConfigurePool_OnlyOwnerAndKnownFeed() public {
         vm.prank(stranger);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, stranger));
-        guard.configurePool(USDC_FEED_ID, 1, 0, 1 ether, true);
+        guard.configurePool(USDC_FEED_ID, 1, 0, 1 ether, true, 0);
 
         bytes32 unknown = keccak256("NOPE / USD");
         vm.prank(owner);
         vm.expectRevert(abi.encodeWithSelector(PegGuard.UnknownFeed.selector, unknown));
-        guard.configurePool(unknown, 1, 0, 1 ether, true);
+        guard.configurePool(unknown, 1, 0, 1 ether, true, 0);
     }
 
     // ── T-P07…T-P13: claims ──────────────────────────────────────────────────────────────────────

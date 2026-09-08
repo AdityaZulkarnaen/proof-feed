@@ -19,8 +19,9 @@ const REGISTRY_ABI = [
 ] as const;
 
 const PEGGUARD_ABI = [
-  'function getPolicy(uint256 policyId) view returns (tuple(bytes32 feedId, address holder, int256 strike, uint128 notional, uint128 premiumPaid, uint64 start, uint64 expiry, uint8 status, uint80 claimRoundId))',
-  'function getPool(bytes32 feedId) view returns (tuple(uint256 balance, uint256 locked, uint256 totalShares, uint16 premiumBpsPer30d, uint32 waitingPeriod, uint128 maxNotional, bool active))',
+  'function getPolicy(uint256 policyId) view returns (tuple(bytes32 feedId, address holder, int256 strike, uint128 notional, uint128 premiumPaid, uint64 start, uint64 expiry, uint8 status, uint80 claimRoundId, uint128 proverBounty))',
+  'function getPool(bytes32 feedId) view returns (tuple(uint256 balance, uint256 locked, uint256 totalShares, uint16 premiumBpsPer30d, uint32 waitingPeriod, uint128 maxNotional, bool active, uint16 proverBountyBps))',
+  'function bountyEscrow() view returns (uint256)',
 ] as const;
 
 export type Source = 'live' | 'cached';
@@ -40,6 +41,9 @@ export interface PolicyReading {
   notionalWei: string;
   poolBalanceWei: string;
   poolLockedWei: string;
+  /** FR-20: share of each premium escrowed for whoever proves the breaching round. */
+  proverBountyBps: number;
+  bountyEscrowWei: string;
 }
 
 export interface ChainState {
@@ -87,7 +91,7 @@ export async function readChainState(): Promise<ChainState> {
 
     const wanted = [FEEDS.usdc, FEEDS.eth] as const;
 
-    const [readings, policy, pool] = await withTimeout(
+    const [readings, policy, pool, escrow] = await withTimeout(
       Promise.all([
         Promise.all(
           wanted.map(async (feed) => {
@@ -104,6 +108,7 @@ export async function readChainState(): Promise<ChainState> {
         ),
         pegGuard.getPolicy!(0),
         pegGuard.getPool!(FEEDS.eth.id),
+        pegGuard.bountyEscrow!(),
       ]),
       12_000,
       'CC3 read',
@@ -119,6 +124,8 @@ export async function readChainState(): Promise<ChainState> {
         notionalWei: (policy.notional as bigint).toString(),
         poolBalanceWei: (pool.balance as bigint).toString(),
         poolLockedWei: (pool.locked as bigint).toString(),
+        proverBountyBps: Number(pool.proverBountyBps),
+        bountyEscrowWei: (escrow as bigint).toString(),
       },
     };
   } catch (err) {

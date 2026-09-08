@@ -34,7 +34,7 @@ contract PegGuardInvariantTest is Test {
         registry.registerFeed(FEED_ID, CHAIN_KEY, AGGREGATOR, PHASE, 8, "USDC / USD");
 
         guard = new PegGuard(IProvenFeedRegistry(address(registry)), owner);
-        guard.configurePool(FEED_ID, 50, 0, 100 ether, true);
+        guard.configurePool(FEED_ID, 50, 0, 100 ether, true, 2_000);
 
         handler = new PegGuardHandler(registry, guard, FEED_ID);
         vm.deal(address(handler), 10_000 ether);
@@ -55,7 +55,17 @@ contract PegGuardInvariantTest is Test {
     ///         `locked`, and `locked <= balance <= address(this).balance`.
     function invariant_ContractBalanceCoversPoolAccounting() public view {
         PegGuard.Pool memory p = guard.getPool(FEED_ID);
-        assertGe(address(guard).balance, p.balance, "solvent");
+        // FR-20: the contract now also custodies bounty escrow, which is NOT part of any pool
+        // balance. Solvency must cover both, or the pool could be spending money it is holding for
+        // provers.
+        assertGe(address(guard).balance, p.balance + guard.bountyEscrow(), "solvent incl. bounty escrow");
+    }
+
+    /// @notice FR-20: escrowed bounty is never counted as pool liquidity, so an LP can never
+    ///         withdraw it and a claim can never pay it out as notional.
+    function invariant_BountyEscrowIsSeparateFromPool() public view {
+        PegGuard.Pool memory p = guard.getPool(FEED_ID);
+        assertGe(address(guard).balance - guard.bountyEscrow(), p.balance, "escrow not double-counted");
     }
 
     /// @notice Shares exist only while there is a balance to redeem them against.
@@ -119,7 +129,11 @@ contract PegGuardInvariantTest is Test {
     function _assertInvariants(string memory stage) internal view {
         PegGuard.Pool memory p = guard.getPool(FEED_ID);
         assertLe(p.locked, p.balance, string.concat("INV-07 violated ", stage));
-        assertGe(address(guard).balance, p.balance, string.concat("insolvent ", stage));
+        assertGe(
+            address(guard).balance,
+            p.balance + guard.bountyEscrow(),
+            string.concat("insolvent incl. escrow ", stage)
+        );
     }
 
     uint256 internal lifecycleRound;
@@ -153,6 +167,7 @@ contract PegGuardInvariantTest is Test {
         console.log("  claims paid     ", handler.claimsPaid());
         console.log("  policies expired", handler.policiesExpired());
         console.log("  withdrawals     ", handler.withdrawals());
+        console.log("  bounties drawn  ", handler.bountiesWithdrawn());
         console.log("  claim rejections: notActive/notProven/window/strike/other");
         console.log("   ", handler.errNotActive(), handler.errNotProven(), handler.errWindow());
         console.log("   ", handler.errStrike(), handler.errOther());
@@ -187,6 +202,7 @@ contract PegGuardHandler is Test {
     uint256 public policiesExpired;
     uint256 public withdrawals;
     uint256 public roundsProven;
+    uint256 public bountiesWithdrawn;
     bytes4 public lastClaimError;
     uint256 public errNotActive;
     uint256 public errNotProven;
@@ -271,6 +287,12 @@ contract PegGuardHandler is Test {
         uint256 id = policies[bound(seed, 0, policies.length - 1)];
         try GUARD.expire(id) {
             ++policiesExpired;
+        } catch {}
+    }
+
+    function withdrawBounty() external {
+        try GUARD.withdrawBounty() returns (uint256) {
+            ++bountiesWithdrawn;
         } catch {}
     }
 

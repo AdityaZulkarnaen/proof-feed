@@ -38,6 +38,9 @@ contract PegGuard is Ownable2Step, ReentrancyGuard {
     /// @param waitingPeriod Seconds between purchase and the start of coverage.
     /// @param maxNotional Largest single policy this pool will write.
     /// @param active Whether new cover may be bought.
+    /// @param proverBountyBps Share of each premium, in basis points, carved out and escrowed as a
+    ///        bounty for whoever proves the breaching round (FR-20). Taken OUT of the premium, not
+    ///        added on top, so a buyer's cost is unchanged by the incentive.
     struct Pool {
         uint256 balance;
         uint256 locked;
@@ -46,6 +49,7 @@ contract PegGuard is Ownable2Step, ReentrancyGuard {
         uint32 waitingPeriod;
         uint128 maxNotional;
         bool active;
+        uint16 proverBountyBps;
     }
 
     /// @param feedId The ProofFeed feed this policy is written against.
@@ -67,6 +71,7 @@ contract PegGuard is Ownable2Step, ReentrancyGuard {
         uint64 expiry;
         Status status;
         uint80 claimRoundId;
+        uint128 proverBounty;
     }
 
     /// @notice The registry of proven rounds. Immutable: PegGuard's only source of truth.
@@ -76,9 +81,20 @@ contract PegGuard is Ownable2Step, ReentrancyGuard {
     mapping(bytes32 feedId => mapping(address lp => uint256)) public sharesOf;
     Policy[] private _policies;
 
+    /// @notice CTC escrowed against live policies as prover bounties. Never part of any pool
+    ///         balance, so it can never be withdrawn by an LP or paid out as a claim.
+    uint256 public bountyEscrow;
+
+    /// @notice Bounties earned and not yet withdrawn (FR-20).
+    /// @dev Pull payment on purpose. Pushing the bounty inside `claim` would let a prover contract
+    ///      that reverts on receive block the holder's payout entirely; the holder must never
+    ///      depend on a third party's fallback.
+    mapping(address prover => uint256) public bountyOwed;
+
     event PoolConfigured(
         bytes32 indexed feedId, uint16 premiumBpsPer30d, uint32 waitingPeriod, uint128 maxNotional, bool active
     );
+    event PoolBountyConfigured(bytes32 indexed feedId, uint16 proverBountyBps);
     event Deposited(bytes32 indexed feedId, address indexed lp, uint256 amount, uint256 shares);
     event Withdrawn(bytes32 indexed feedId, address indexed lp, uint256 amount, uint256 shares);
     event CoverBought(
@@ -99,6 +115,12 @@ contract PegGuard is Ownable2Step, ReentrancyGuard {
         address caller
     );
     event PolicyExpired(uint256 indexed policyId, bytes32 indexed feedId, uint128 notionalReleased);
+    /// @notice A bounty was earned by whoever first proved the breaching round (FR-20).
+    event BountyAccrued(uint256 indexed policyId, address indexed prover, uint256 amount);
+    /// @notice An earned bounty was withdrawn.
+    event BountyWithdrawn(address indexed prover, uint256 amount);
+    /// @notice An unearned bounty returned to the pool because the policy expired unclaimed.
+    event BountyReleased(uint256 indexed policyId, bytes32 indexed feedId, uint256 amount);
 
     /// @notice No feed with this id is registered in ProofFeed.
     error UnknownFeed(bytes32 feedId);
@@ -132,6 +154,10 @@ contract PegGuard is Ownable2Step, ReentrancyGuard {
     error TransferFailed(address to, uint256 amount);
     /// @notice Deposit of zero.
     error ZeroAmount();
+    /// @notice Nothing to withdraw.
+    error NothingOwed(address prover);
+    /// @notice The bounty share must leave something for the pool.
+    error InvalidBountyShare(uint16 bps);
     /// @notice Every unit of this pool was paid out; the shares still outstanding are worthless.
     error PoolWipedOut(bytes32 feedId);
     /// @notice No such policy id.
@@ -156,15 +182,20 @@ contract PegGuard is Ownable2Step, ReentrancyGuard {
         uint16 premiumBpsPer30d,
         uint32 waitingPeriod,
         uint128 maxNotional,
-        bool active
+        bool active,
+        uint16 proverBountyBps
     ) external onlyOwner {
         if (REGISTRY.getFeed(feedId).emitter == address(0)) revert UnknownFeed(feedId);
+        // A full-premium bounty would leave the pool underwriting for nothing.
+        if (proverBountyBps > 5_000) revert InvalidBountyShare(proverBountyBps);
         Pool storage p = _pools[feedId];
         p.premiumBpsPer30d = premiumBpsPer30d;
         p.waitingPeriod = waitingPeriod;
         p.maxNotional = maxNotional;
         p.active = active;
+        p.proverBountyBps = proverBountyBps;
         emit PoolConfigured(feedId, premiumBpsPer30d, waitingPeriod, maxNotional, active);
+        emit PoolBountyConfigured(feedId, proverBountyBps);
     }
 
     // ── Liquidity ────────────────────────────────────────────────────────────────────────────────
@@ -233,6 +264,16 @@ contract PegGuard is Ownable2Step, ReentrancyGuard {
         return (notional * _pools[feedId].premiumBpsPer30d * durationDays) / 30 / 10_000;
     }
 
+    /// @notice The share of that premium escrowed as a prover bounty (FR-20).
+    /// @dev Carved out of the premium, so the buyer pays exactly `quote()` either way.
+    function quoteBounty(bytes32 feedId, uint256 notional, uint256 durationDays)
+        public
+        view
+        returns (uint256 bounty)
+    {
+        return (quote(feedId, notional, durationDays) * _pools[feedId].proverBountyBps) / 10_000;
+    }
+
     /// @notice Buy cover. Pays `notional` if the feed prints below `strike` inside the window.
     /// @param feedId The feed to cover.
     /// @param strike Trigger price in feed decimals (e.g. $0.97 on an 8-decimal feed = 97_000_000).
@@ -256,8 +297,13 @@ contract PegGuard is Ownable2Step, ReentrancyGuard {
         uint256 premium = quote(feedId, notional, durationDays);
         if (msg.value != premium) revert WrongPremium(premium, msg.value);
 
-        // The premium joins the pool immediately; it is not refundable (D-06).
-        p.balance += msg.value;
+        // FR-20: the bounty is carved OUT of the premium and escrowed, so it is never part of pool
+        // balance and can never be withdrawn by an LP or spent on a payout.
+        uint256 bounty = (premium * p.proverBountyBps) / 10_000;
+
+        // The rest of the premium joins the pool immediately; it is not refundable (D-06).
+        p.balance += premium - bounty;
+        bountyEscrow += bounty;
         p.locked += notional;
 
         uint64 start = uint64(block.timestamp) + p.waitingPeriod;
@@ -274,7 +320,8 @@ contract PegGuard is Ownable2Step, ReentrancyGuard {
                 start: start,
                 expiry: expiry,
                 status: Status.ACTIVE,
-                claimRoundId: 0
+                claimRoundId: 0,
+                proverBounty: uint128(bounty)
             })
         );
 
@@ -338,8 +385,33 @@ contract PegGuard is Ownable2Step, ReentrancyGuard {
         if (block.timestamp <= p.expiry) revert NotExpired(policyId, p.expiry);
 
         p.status = Status.EXPIRED;
-        _pools[p.feedId].locked -= p.notional;
+        Pool storage pool = _pools[p.feedId];
+        pool.locked -= p.notional;
+
+        // No round breached, so nobody earned the bounty. It returns to the LPs who carried the
+        // risk rather than sitting in escrow forever.
+        uint128 bounty = p.proverBounty;
+        if (bounty > 0) {
+            p.proverBounty = 0;
+            bountyEscrow -= bounty;
+            pool.balance += bounty;
+            emit BountyReleased(policyId, p.feedId, bounty);
+        }
+
         emit PolicyExpired(policyId, p.feedId, p.notional);
+    }
+
+    /// @notice Withdraw bounties earned for proving breaching rounds (FR-20).
+    /// @dev Pull payment: `claim` only credits the ledger, so a prover that cannot receive CTC can
+    ///      never block a holder's payout.
+    /// @return amount The CTC withdrawn.
+    function withdrawBounty() external nonReentrant returns (uint256 amount) {
+        amount = bountyOwed[msg.sender];
+        if (amount == 0) revert NothingOwed(msg.sender);
+        bountyOwed[msg.sender] = 0;
+        bountyEscrow -= amount;
+        _pay(msg.sender, amount);
+        emit BountyWithdrawn(msg.sender, amount);
     }
 
     /// @dev The whole settlement decision, in one place. Checks → effects → interaction.
@@ -364,6 +436,19 @@ contract PegGuard is Ownable2Step, ReentrancyGuard {
         Pool storage pool = _pools[p.feedId];
         pool.locked -= notional;
         pool.balance -= notional;
+
+        // FR-20. The registry records who first proved each round, so the bounty follows the work
+        // rather than the caller: a keeper running `pf watch` earns it even when somebody else
+        // settles the policy. On the `proveAndClaim` path the recorded prover is this contract, so
+        // it falls through to the caller, who did prove it in that same transaction.
+        uint128 bounty = p.proverBounty;
+        if (bounty > 0) {
+            address prover = r.prover;
+            if (prover == address(this) || prover == address(0)) prover = msg.sender;
+            p.proverBounty = 0;
+            bountyOwed[prover] += bounty;
+            emit BountyAccrued(policyId, prover, bounty);
+        }
 
         // Interaction. INV-09: the holder is paid regardless of who called.
         _pay(holder, notional);

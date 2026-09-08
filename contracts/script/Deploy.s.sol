@@ -34,6 +34,7 @@ contract Deploy is Script {
         uint16 premiumBps = uint16(vm.envOr("POOL_PREMIUM_BPS_30D", uint256(50)));
         uint32 waitingPeriod = uint32(vm.envOr("POOL_WAITING_PERIOD", uint256(0)));
         uint128 maxNotional = uint128(vm.envOr("POOL_MAX_NOTIONAL", uint256(100 ether)));
+        uint16 bountyBps = uint16(vm.envOr("POOL_PROVER_BOUNTY_BPS", uint256(2000)));
 
         bytes32 feedId = keccak256(bytes(feedDescription));
 
@@ -49,7 +50,7 @@ contract Deploy is Script {
             new ProvenFeedAdapter(IProvenFeedRegistry(address(registry)), feedId);
 
         PegGuard pegGuard = new PegGuard(IProvenFeedRegistry(address(registry)), owner);
-        pegGuard.configurePool(feedId, premiumBps, waitingPeriod, maxNotional, true);
+        pegGuard.configurePool(feedId, premiumBps, waitingPeriod, maxNotional, true, bountyBps);
 
         vm.stopBroadcast();
 

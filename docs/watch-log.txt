@@ -10,113 +10,60 @@
 
 [1m[36m▸ watching "ETH / USD" aggregator 0x7d4E742018fb52E48b08BE73d041C18B21de6Fb5 every 120s[0m
 [34m[info] [0m this keeper has no privileges: it pays gas, the contract decides what is true
-[35m[surface][0m [1meth_getLogs(aggregator, AnswerUpdated)[0m [2m→[0m 1 logs over blocks 25.930.707-25.931.007 in 1 request(s), chunk 20000
+[35m[surface][0m [1meth_getLogs(aggregator, AnswerUpdated)[0m [2m→[0m 4 logs over blocks 25.932.884-25.933.184 in 1 request(s), chunk 20000
 
-[1m[36m▸ proving round 129127208515966894721 — 2463.55617377 at 2026-09-08T06:54:35.000Z[0m
-[34m[info] [0m block 25.930.987 not attested yet (tip 25.930.970) — waiting
-Height 25930987 not yet attested and in proof builder service cache for chain key 3. Latest height: 25930970. Retrying in 15000ms...
-Height 25930987 not yet attested and in proof builder service cache for chain key 3. Latest height: 25930970. Retrying in 15000ms...
-Height 25930987 not yet attested and in proof builder service cache for chain key 3. Latest height: 25930970. Retrying in 15000ms...
-Height 25930987 not yet attested and in proof builder service cache for chain key 3. Latest height: 25930970. Retrying in 15000ms...
-Height 25930987 not yet attested and in proof builder service cache for chain key 3. Latest height: 25930970. Retrying in 15000ms...
-Height 25930987 not yet attested and in proof builder service cache for chain key 3. Latest height: 25930970. Retrying in 15000ms...
-Height 25930987 not yet attested and in proof builder service cache for chain key 3. Latest height: 25930980. Retrying in 15000ms...
-Height 25930987 not yet attested and in proof builder service cache for chain key 3. Latest height: 25930980. Retrying in 15000ms...
-Height 25930987 not yet attested and in proof builder service cache for chain key 3. Latest height: 25930980. Retrying in 15000ms...
-Height 25930987 not yet attested and in proof builder service cache for chain key 3. Latest height: 25930980. Retrying in 15000ms...
-Height 25930987 not yet attested and in proof builder service cache for chain key 3. Latest height: 25930980. Retrying in 15000ms...
-Height 25930987 not yet attested and in proof builder service cache for chain key 3. Latest height: 25930980. Retrying in 15000ms...
-Height 25930987 not yet attested and in proof builder service cache for chain key 3. Latest height: 25930980. Retrying in 15000ms...
-Height 25930987 not yet attested and in proof builder service cache for chain key 3. Latest height: 25930980. Retrying in 15000ms...
-Height 25930987 not yet attested and in proof builder service cache for chain key 3. Latest height: 25930980. Retrying in 15000ms...
-[35m[surface][0m [1mProofBuilder.getProof[0m [2m→[0m tx 0x106e4fd2... -> header 25.930.987, txIndex 56, 8 siblings, 4 continuity roots, cached=true
+[1m[36m▸ proving round 129127208515966894730 — 2456.22232990 at 2026-09-08T13:33:35.000Z[0m
+[35m[surface][0m [1mchainInfo.getLatestAttestedHeightAndHash[0m [2m→[0m key 3 -> height 25.933.140 (attestation, exists=true)
+[35m[surface][0m [1mProofBuilder.getProof[0m [2m→[0m tx 0x8b407532... -> header 25.932.969, txIndex 84, 8 siblings, 32 continuity roots, cached=true
 [35m[surface][0m [1mPrecompileBlockProver.verifySingle[0m [2m→[0m dry-run (eth_call, 0xFD2) -> true
-[34m[info] [0m wallet 0x259559fA11C2247f3fD5E1D87be9BFA816Fd97D7 balance 9649.874864 CTC
-[34m[info] [0m gas policy: estimateGas 295106 x1.35
-[34m[info] [0m submitted 0x12aa7d4527ae97f36b5f747e0e6088d3607b5fc6187ea06d1e35cc3f5749239e — https://creditcoin-testnet.blockscout.com/tx/0x12aa7d4527ae97f36b5f747e0e6088d3607b5fc6187ea06d1e35cc3f5749239e
+[34m[info] [0m wallet 0x259559fA11C2247f3fD5E1D87be9BFA816Fd97D7 balance 9449.814355 CTC
+[34m[info] [0m gas policy: estimateGas 315413 x1.35
+[34m[info] [0m submitted 0xf6d2a36dde1a3e0944c717f43b9f3aa31a06ad03354bd0349e5d25372c930536 — https://creditcoin-testnet.blockscout.com/tx/0xf6d2a36dde1a3e0944c717f43b9f3aa31a06ad03354bd0349e5d25372c930536
 [35m[surface][0m [1mProvenFeedRegistry.recordRound (on-chain)[0m [2m→[0m status 1
 [35m[surface][0m [1mINativeQueryVerifier.verifyAndEmit (on-chain, 0xFD2)[0m [2m→[0m inclusion + continuity verified inside recordRound
 [35m[surface][0m [1mEvmV1Decoder.{getTransactionType,decodeReceiptFields,getLogsByEventSignature} (on-chain)[0m [2m→[0m round decoded from the verified bytes
-[32m[ok]   [0m recordRound status 1 — 272.801 gas (0.360% of the 75,000,000 block cap)
-[34m[info] [0m   TransactionVerified from 0x0000000000000000000000000000000000000FD2: {"chainKey":"3","height":"25930987","transactionIndex":"56"}
-[34m[info] [0m   RoundProven from 0x89ab0ad8768CD06d0f3bc134ad2407705a49d309: {"feedId":"0x62ddc8c5ffbd077b5a28e92efd10abcc58e66fb2a326401f0efd02e173ac1777","roundId":"129127208515966894721","answer":"246355617377","updatedAt":"1788850475","queryId":"0xdbb55541ce5a666ba5563cf71c3ea41873e1b86e2e545e3248cee248887bdb82","prover":"0x259559fA11C2247f3fD5E1D87be9BFA816Fd97D7"}
-[34m[info] [0m   LatestRoundUpdated from 0x89ab0ad8768CD06d0f3bc134ad2407705a49d309: {"feedId":"0x62ddc8c5ffbd077b5a28e92efd10abcc58e66fb2a326401f0efd02e173ac1777","roundId":"129127208515966894721"}
-[32m[ok]   [0m round 129127208515966894721 proven in 0x12aa7d4527ae97f36b5f747e0e6088d3607b5fc6187ea06d1e35cc3f5749239e
-[35m[surface][0m [1meth_getLogs(aggregator, AnswerUpdated)[0m [2m→[0m 0 logs over blocks 25.931.008-25.931.039 in 1 request(s), chunk 20000
-[34m[info] [0m [2] blocks 25.931.008-25.931.039: nothing new to prove
-[35m[surface][0m [1meth_getLogs(aggregator, AnswerUpdated)[0m [2m→[0m 0 logs over blocks 25.931.040-25.931.049 in 1 request(s), chunk 20000
-[34m[info] [0m [3] blocks 25.931.040-25.931.049: nothing new to prove
-[35m[surface][0m [1meth_getLogs(aggregator, AnswerUpdated)[0m [2m→[0m 0 logs over blocks 25.931.050-25.931.058 in 1 request(s), chunk 20000
-[34m[info] [0m [4] blocks 25.931.050-25.931.058: nothing new to prove
-[35m[surface][0m [1meth_getLogs(aggregator, AnswerUpdated)[0m [2m→[0m 0 logs over blocks 25.931.059-25.931.068 in 1 request(s), chunk 20000
-[34m[info] [0m [5] blocks 25.931.059-25.931.068: nothing new to prove
-[35m[surface][0m [1meth_getLogs(aggregator, AnswerUpdated)[0m [2m→[0m 0 logs over blocks 25.931.069-25.931.078 in 1 request(s), chunk 20000
-[34m[info] [0m [6] blocks 25.931.069-25.931.078: nothing new to prove
-[35m[surface][0m [1meth_getLogs(aggregator, AnswerUpdated)[0m [2m→[0m 0 logs over blocks 25.931.079-25.931.088 in 1 request(s), chunk 20000
-[34m[info] [0m [7] blocks 25.931.079-25.931.088: nothing new to prove
-[35m[surface][0m [1meth_getLogs(aggregator, AnswerUpdated)[0m [2m→[0m 0 logs over blocks 25.931.089-25.931.098 in 1 request(s), chunk 20000
-[34m[info] [0m [8] blocks 25.931.089-25.931.098: nothing new to prove
-[35m[surface][0m [1meth_getLogs(aggregator, AnswerUpdated)[0m [2m→[0m 0 logs over blocks 25.931.099-25.931.108 in 1 request(s), chunk 20000
-[34m[info] [0m [9] blocks 25.931.099-25.931.108: nothing new to prove
-[35m[surface][0m [1meth_getLogs(aggregator, AnswerUpdated)[0m [2m→[0m 0 logs over blocks 25.931.109-25.931.118 in 1 request(s), chunk 20000
-[34m[info] [0m [10] blocks 25.931.109-25.931.118: nothing new to prove
-[35m[surface][0m [1meth_getLogs(aggregator, AnswerUpdated)[0m [2m→[0m 0 logs over blocks 25.931.119-25.931.128 in 1 request(s), chunk 20000
-[34m[info] [0m [11] blocks 25.931.119-25.931.128: nothing new to prove
-[35m[surface][0m [1meth_getLogs(aggregator, AnswerUpdated)[0m [2m→[0m 1 logs over blocks 25.931.129-25.931.138 in 1 request(s), chunk 20000
+[32m[ok]   [0m recordRound status 1 — 292.492 gas (0.380% of the 75,000,000 block cap)
+[34m[info] [0m   TransactionVerified from 0x0000000000000000000000000000000000000FD2: {"chainKey":"3","height":"25932969","transactionIndex":"84"}
+[34m[info] [0m   RoundProven from 0x89ab0ad8768CD06d0f3bc134ad2407705a49d309: {"feedId":"0x62ddc8c5ffbd077b5a28e92efd10abcc58e66fb2a326401f0efd02e173ac1777","roundId":"129127208515966894730","answer":"245622232990","updatedAt":"1788874415","queryId":"0xfff37e35e3d2327f11b4183590e2444effc8f480c81eb172105406ffb307e0ba","prover":"0x259559fA11C2247f3fD5E1D87be9BFA816Fd97D7"}
+[34m[info] [0m   LatestRoundUpdated from 0x89ab0ad8768CD06d0f3bc134ad2407705a49d309: {"feedId":"0x62ddc8c5ffbd077b5a28e92efd10abcc58e66fb2a326401f0efd02e173ac1777","roundId":"129127208515966894730"}
+[32m[ok]   [0m round 129127208515966894730 proven in 0xf6d2a36dde1a3e0944c717f43b9f3aa31a06ad03354bd0349e5d25372c930536
 
-[1m[36m▸ proving round 129127208515966894722 — 2476.65985171 at 2026-09-08T07:24:35.000Z[0m
-[34m[info] [0m block 25.931.136 not attested yet (tip 25.931.100) — waiting
-Height 25931136 not yet attested and in proof builder service cache for chain key 3. Latest height: 25931100. Retrying in 15000ms...
-Height 25931136 not yet attested and in proof builder service cache for chain key 3. Latest height: 25931100. Retrying in 15000ms...
-Height 25931136 not yet attested and in proof builder service cache for chain key 3. Latest height: 25931100. Retrying in 15000ms...
-Height 25931136 not yet attested and in proof builder service cache for chain key 3. Latest height: 25931100. Retrying in 15000ms...
-Height 25931136 not yet attested and in proof builder service cache for chain key 3. Latest height: 25931100. Retrying in 15000ms...
-Height 25931136 not yet attested and in proof builder service cache for chain key 3. Latest height: 25931110. Retrying in 15000ms...
-Height 25931136 not yet attested and in proof builder service cache for chain key 3. Latest height: 25931110. Retrying in 15000ms...
-Height 25931136 not yet attested and in proof builder service cache for chain key 3. Latest height: 25931110. Retrying in 15000ms...
-Height 25931136 not yet attested and in proof builder service cache for chain key 3. Latest height: 25931110. Retrying in 15000ms...
-Height 25931136 not yet attested and in proof builder service cache for chain key 3. Latest height: 25931110. Retrying in 15000ms...
-Height 25931136 not yet attested and in proof builder service cache for chain key 3. Latest height: 25931110. Retrying in 15000ms...
-Height 25931136 not yet attested and in proof builder service cache for chain key 3. Latest height: 25931110. Retrying in 15000ms...
-Height 25931136 not yet attested and in proof builder service cache for chain key 3. Latest height: 25931110. Retrying in 15000ms...
-Height 25931136 not yet attested and in proof builder service cache for chain key 3. Latest height: 25931120. Retrying in 15000ms...
-Height 25931136 not yet attested and in proof builder service cache for chain key 3. Latest height: 25931120. Retrying in 15000ms...
-Height 25931136 not yet attested and in proof builder service cache for chain key 3. Latest height: 25931120. Retrying in 15000ms...
-Height 25931136 not yet attested and in proof builder service cache for chain key 3. Latest height: 25931120. Retrying in 15000ms...
-Height 25931136 not yet attested and in proof builder service cache for chain key 3. Latest height: 25931120. Retrying in 15000ms...
-Height 25931136 not yet attested and in proof builder service cache for chain key 3. Latest height: 25931120. Retrying in 15000ms...
-Height 25931136 not yet attested and in proof builder service cache for chain key 3. Latest height: 25931120. Retrying in 15000ms...
-Height 25931136 not yet attested and in proof builder service cache for chain key 3. Latest height: 25931130. Retrying in 15000ms...
-Height 25931136 not yet attested and in proof builder service cache for chain key 3. Latest height: 25931130. Retrying in 15000ms...
-Height 25931136 not yet attested and in proof builder service cache for chain key 3. Latest height: 25931130. Retrying in 15000ms...
-Height 25931136 not yet attested and in proof builder service cache for chain key 3. Latest height: 25931130. Retrying in 15000ms...
-Height 25931136 not yet attested and in proof builder service cache for chain key 3. Latest height: 25931130. Retrying in 15000ms...
-Height 25931136 not yet attested and in proof builder service cache for chain key 3. Latest height: 25931130. Retrying in 15000ms...
-Height 25931136 not yet attested and in proof builder service cache for chain key 3. Latest height: 25931130. Retrying in 15000ms...
-Height 25931136 not yet attested and in proof builder service cache for chain key 3. Latest height: 25931130. Retrying in 15000ms...
-[35m[surface][0m [1mProofBuilder.getProof[0m [2m→[0m tx 0x3fab0d30... -> header 25.931.136, txIndex 67, 9 siblings, 5 continuity roots, cached=true
+[1m[36m▸ proving round 129127208515966894731 — 2442.11130000 at 2026-09-08T13:41:35.000Z[0m
+[35m[surface][0m [1mchainInfo.getLatestAttestedHeightAndHash[0m [2m→[0m key 3 -> height 25.933.150 (attestation, exists=true)
+[35m[surface][0m [1mProofBuilder.getProof[0m [2m→[0m tx 0x109d05be... -> header 25.933.009, txIndex 510, 10 siblings, 2 continuity roots, cached=true
 [35m[surface][0m [1mPrecompileBlockProver.verifySingle[0m [2m→[0m dry-run (eth_call, 0xFD2) -> true
-[34m[info] [0m wallet 0x259559fA11C2247f3fD5E1D87be9BFA816Fd97D7 balance 9649.874559 CTC
-[34m[info] [0m gas policy: estimateGas 297224 x1.35
-[34m[info] [0m submitted 0xf8a1191896e7f3032decf233c517f97803e85b17f911e0e494e6e99fe4af27f5 — https://creditcoin-testnet.blockscout.com/tx/0xf8a1191896e7f3032decf233c517f97803e85b17f911e0e494e6e99fe4af27f5
+[34m[info] [0m wallet 0x259559fA11C2247f3fD5E1D87be9BFA816Fd97D7 balance 9449.814209 CTC
+[34m[info] [0m gas policy: estimateGas 296782 x1.35
+[34m[info] [0m submitted 0xeda5c7acfc5efa962f9a04782730b2158d68280ddc5d81494f5302799e9c220e — https://creditcoin-testnet.blockscout.com/tx/0xeda5c7acfc5efa962f9a04782730b2158d68280ddc5d81494f5302799e9c220e
 [35m[surface][0m [1mProvenFeedRegistry.recordRound (on-chain)[0m [2m→[0m status 1
 [35m[surface][0m [1mINativeQueryVerifier.verifyAndEmit (on-chain, 0xFD2)[0m [2m→[0m inclusion + continuity verified inside recordRound
 [35m[surface][0m [1mEvmV1Decoder.{getTransactionType,decodeReceiptFields,getLogsByEventSignature} (on-chain)[0m [2m→[0m round decoded from the verified bytes
-[32m[ok]   [0m recordRound status 1 — 274.855 gas (0.360% of the 75,000,000 block cap)
-[34m[info] [0m   TransactionVerified from 0x0000000000000000000000000000000000000FD2: {"chainKey":"3","height":"25931136","transactionIndex":"67"}
-[34m[info] [0m   RoundProven from 0x89ab0ad8768CD06d0f3bc134ad2407705a49d309: {"feedId":"0x62ddc8c5ffbd077b5a28e92efd10abcc58e66fb2a326401f0efd02e173ac1777","roundId":"129127208515966894722","answer":"247665985171","updatedAt":"1788852275","queryId":"0x7b2736e4d2e1254d94930c25ea070edc7a91dfb9d1d67202a91dcaf6ea5f310a","prover":"0x259559fA11C2247f3fD5E1D87be9BFA816Fd97D7"}
-[34m[info] [0m   LatestRoundUpdated from 0x89ab0ad8768CD06d0f3bc134ad2407705a49d309: {"feedId":"0x62ddc8c5ffbd077b5a28e92efd10abcc58e66fb2a326401f0efd02e173ac1777","roundId":"129127208515966894722"}
-[32m[ok]   [0m round 129127208515966894722 proven in 0xf8a1191896e7f3032decf233c517f97803e85b17f911e0e494e6e99fe4af27f5
-[35m[surface][0m [1meth_getLogs(aggregator, AnswerUpdated)[0m [2m→[0m 0 logs over blocks 25.931.139-25.931.188 in 1 request(s), chunk 20000
-[34m[info] [0m [13] blocks 25.931.139-25.931.188: nothing new to prove
-[35m[surface][0m [1meth_getLogs(aggregator, AnswerUpdated)[0m [2m→[0m 0 logs over blocks 25.931.189-25.931.198 in 1 request(s), chunk 20000
-[34m[info] [0m [14] blocks 25.931.189-25.931.198: nothing new to prove
-[35m[surface][0m [1meth_getLogs(aggregator, AnswerUpdated)[0m [2m→[0m 0 logs over blocks 25.931.199-25.931.208 in 1 request(s), chunk 20000
-[34m[info] [0m [15] blocks 25.931.199-25.931.208: nothing new to prove
-npm error Lifecycle script `pf` failed with error:
-npm error code 4294967295
-npm error path D:\coding\Dora\chainlink\cli
-npm error workspace proof-feed-cli@0.1.0
-npm error location D:\coding\Dora\chainlink\cli
-npm error command failed
-npm error command C:\WINDOWS\system32\cmd.exe /d /s /c tsx src/index.ts watch --feed ETH/USD --interval 120
+[32m[ok]   [0m recordRound status 1 — 274.426 gas (0.360% of the 75,000,000 block cap)
+[34m[info] [0m   TransactionVerified from 0x0000000000000000000000000000000000000FD2: {"chainKey":"3","height":"25933009","transactionIndex":"510"}
+[34m[info] [0m   RoundProven from 0x89ab0ad8768CD06d0f3bc134ad2407705a49d309: {"feedId":"0x62ddc8c5ffbd077b5a28e92efd10abcc58e66fb2a326401f0efd02e173ac1777","roundId":"129127208515966894731","answer":"244211130000","updatedAt":"1788874895","queryId":"0xe2d789c2505d5422dceb4d4bf3de2442d90cd51966db375ac8dbdc3126a34770","prover":"0x259559fA11C2247f3fD5E1D87be9BFA816Fd97D7"}
+[34m[info] [0m   LatestRoundUpdated from 0x89ab0ad8768CD06d0f3bc134ad2407705a49d309: {"feedId":"0x62ddc8c5ffbd077b5a28e92efd10abcc58e66fb2a326401f0efd02e173ac1777","roundId":"129127208515966894731"}
+[32m[ok]   [0m round 129127208515966894731 proven in 0xeda5c7acfc5efa962f9a04782730b2158d68280ddc5d81494f5302799e9c220e
+
+[1m[36m▸ proving round 129127208515966894732 — 2455.68488618 at 2026-09-08T13:56:23.000Z[0m
+[35m[surface][0m [1mchainInfo.getLatestAttestedHeightAndHash[0m [2m→[0m key 3 -> height 25.933.150 (attestation, exists=true)
+[35m[surface][0m [1mProofBuilder.getProof[0m [2m→[0m tx 0x429629ef... -> header 25.933.082, txIndex 479, 9 siblings, 9 continuity roots, cached=true
+[35m[surface][0m [1mPrecompileBlockProver.verifySingle[0m [2m→[0m dry-run (eth_call, 0xFD2) -> true
+[34m[info] [0m wallet 0x259559fA11C2247f3fD5E1D87be9BFA816Fd97D7 balance 9449.814071 CTC
+[34m[info] [0m gas policy: estimateGas 300405 x1.35
+[34m[info] [0m submitted 0x053051e4908fe471a67c4e3fda77223aeff965c35d373ae894cf6404226b41e6 — https://creditcoin-testnet.blockscout.com/tx/0x053051e4908fe471a67c4e3fda77223aeff965c35d373ae894cf6404226b41e6
+[35m[surface][0m [1mProvenFeedRegistry.recordRound (on-chain)[0m [2m→[0m status 1
+[35m[surface][0m [1mINativeQueryVerifier.verifyAndEmit (on-chain, 0xFD2)[0m [2m→[0m inclusion + continuity verified inside recordRound
+[35m[surface][0m [1mEvmV1Decoder.{getTransactionType,decodeReceiptFields,getLogsByEventSignature} (on-chain)[0m [2m→[0m round decoded from the verified bytes
+[32m[ok]   [0m recordRound status 1 — 277.939 gas (0.370% of the 75,000,000 block cap)
+[34m[info] [0m   TransactionVerified from 0x0000000000000000000000000000000000000FD2: {"chainKey":"3","height":"25933082","transactionIndex":"479"}
+[34m[info] [0m   RoundProven from 0x89ab0ad8768CD06d0f3bc134ad2407705a49d309: {"feedId":"0x62ddc8c5ffbd077b5a28e92efd10abcc58e66fb2a326401f0efd02e173ac1777","roundId":"129127208515966894732","answer":"245568488618","updatedAt":"1788875783","queryId":"0x6d6f8c430d632d30d92bc56c6f28d77c5afb71d453416c1fd958a1f6ff345a97","prover":"0x259559fA11C2247f3fD5E1D87be9BFA816Fd97D7"}
+[34m[info] [0m   LatestRoundUpdated from 0x89ab0ad8768CD06d0f3bc134ad2407705a49d309: {"feedId":"0x62ddc8c5ffbd077b5a28e92efd10abcc58e66fb2a326401f0efd02e173ac1777","roundId":"129127208515966894732"}
+[32m[ok]   [0m round 129127208515966894732 proven in 0x053051e4908fe471a67c4e3fda77223aeff965c35d373ae894cf6404226b41e6
+
+[1m[36m▸ proving round 129127208515966894733 — 2470.22595207 at 2026-09-08T14:11:59.000Z[0m
+[35m[surface][0m [1mchainInfo.getLatestAttestedHeightAndHash[0m [2m→[0m key 3 -> height 25.933.150 (attestation, exists=true)
+[34m[info] [0m block 25.933.160 not attested yet (tip 25.933.150) — waiting
+Height 25933160 not yet attested and in proof builder service cache for chain key 3. Latest height: 25933150. Retrying in 15000ms...
+Height 25933160 not yet attested and in proof builder service cache for chain key 3. Latest height: 25933150. Retrying in 15000ms...
+Height 25933160 not yet attested and in proof builder service cache for chain key 3. Latest height: 25933150. Retrying in 15000ms...
+Height 25933160 not yet attested and in proof builder service cache for chain key 3. Latest height: 25933150. Retrying in 15000ms...
