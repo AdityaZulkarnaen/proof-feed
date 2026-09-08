@@ -127,12 +127,37 @@ this unmodified — there is a test that does exactly that with its own locally-
 ## Reproduce in three commands
 
 ```bash
+git clone https://github.com/AdityaZulkarnaen/proof-feed.git && cd proof-feed
 npm ci && (cd contracts && forge test)          # 90 tests, zero network access
-npm run pf -- spike                             # re-runs every Day-1 gate live
-npm run pf -- prove --feed USDC/USD --latest    # prove the newest round yourself
+npm run pf -- demo --yes                        # read the live deployment back off CC3
 ```
 
-`pf prove` is idempotent: if the round is already stored it exits 0 without spending gas.
+**No `.env` is needed for any of that.** The CLI defaults to the live CC3 deployment and to public
+RPC endpoints, so a fresh clone can read the registry, confirm the 2023 depeg round is stored, and
+see the settled policy without configuring anything. Verified by actually doing it — see
+"Fresh-clone check" below.
+
+Two more, still with no configuration:
+
+```bash
+npm run pf -- spike                             # re-runs every Day-1 gate against the live network
+npm run pf -- prove --feed USDC/USD --latest    # idempotent: exits 0 if the round is already stored
+```
+
+`pf prove` only needs `CREDITCOIN_WALLET_PRIVATE_KEY` when it actually has a *new* round to submit.
+
+### Fresh-clone check
+
+Run on a clean `git clone` into an empty directory, with no `.env`:
+
+| Step | Result |
+|---|---|
+| `npm ci` | 50 packages, clean |
+| `forge test` | **90 passed, 0 failed** — Foundry auto-fetches the pinned `forge-std` v1.16.2 submodule on first run (needs network once; or clone with `--recurse-submodules`) |
+| `npm run typecheck` | clean |
+| `npm run test:cli` | **23 passed** |
+| `npm run pf -- spike` | G1, G2, G3a, G3b all **PASS** with no `.env` |
+| `npm run pf -- demo --yes` | reads the live registry and the settled policy |
 
 ## Attestcoin Protocol integration
 
@@ -212,7 +237,7 @@ stored.
 
 ```
 contracts:  90 tests, 5 suites — forge test          (no network access)
-cli:        18 tests                                  — npm run test:cli
+cli:        23 tests                                  — npm run test:cli
 coverage:   98.7% of lines on src/ (233/236), excluding the Day-1 spike contract
 ```
 

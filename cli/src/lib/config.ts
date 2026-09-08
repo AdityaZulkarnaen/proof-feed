@@ -14,6 +14,17 @@ export const REPO_ROOT = resolve(HERE, '..', '..', '..');
 const envPath = resolve(REPO_ROOT, '.env');
 if (existsSync(envPath)) loadDotenv({ path: envPath, quiet: true });
 
+/**
+ * The P0 deployment on Creditcoin CC3 testnet, all source-verified on Blockscout.
+ * Used as defaults so the CLI is useful straight out of a clone (docs/DEPLOYMENT.md).
+ */
+export const DEPLOYED = {
+  registry: '0x89ab0ad8768CD06d0f3bc134ad2407705a49d309',
+  adapter: '0x678C84Fe193a569FbDAF58e5f0d8f290a4072735',
+  pegGuard: '0xc836457AD046a329E93e40A4B747E90ee53B85bC',
+  probe: '0x846D0C55a916e925331599bf086f9B203E68917B',
+} as const;
+
 export class ConfigError extends Error {
   constructor(variable: string, hint: string) {
     super(`Missing/invalid configuration: ${variable}. ${hint}`);
@@ -69,10 +80,13 @@ export function loadConfig(): Config {
     ethSepoliaRpcUrl: optional('ETH_SEPOLIA_RPC_URL', 'https://ethereum-sepolia-rpc.publicnode.com'),
     feedProxyUsdcUsd: str('FEED_PROXY_USDC_USD', '0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6'),
     feedProxyEthUsd: str('FEED_PROXY_ETH_USD', '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419'),
-    probeAddress: optional('PROBE_ADDRESS'),
-    registryAddress: optional('REGISTRY_ADDRESS'),
-    adapterAddress: optional('ADAPTER_ADDRESS'),
-    pegguardAddress: optional('PEGGUARD_ADDRESS'),
+    // The live CC3-testnet deployment is the default, so a fresh clone with no .env can read the
+    // registry, run `pf demo`, and confirm a round is already proven without any setup. These are
+    // public addresses (README, docs/DEPLOYMENT.md, Blockscout); override them to point at your own.
+    probeAddress: optional('PROBE_ADDRESS', DEPLOYED.probe),
+    registryAddress: optional('REGISTRY_ADDRESS', DEPLOYED.registry),
+    adapterAddress: optional('ADAPTER_ADDRESS', DEPLOYED.adapter),
+    pegguardAddress: optional('PEGGUARD_ADDRESS', DEPLOYED.pegGuard),
   };
 }
 
