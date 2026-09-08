@@ -161,7 +161,11 @@ Run on a clean `git clone` into an empty directory, with no `.env`:
 
 ## Attestcoin Protocol integration
 
-Surfaces that do real work on the default `npm run pf -- prove` path — no decoration:
+Split honestly by which command actually exercises them. Every `pf` command ends by printing the
+surfaces it just used, so you can check this table against the tool's own output rather than trusting
+it.
+
+**On the default `npm run pf -- prove` path — the load-bearing set:**
 
 | Surface | Where | What it does here |
 |---|---|---|
@@ -171,16 +175,24 @@ Surfaces that do real work on the default `npm run pf -- prove` path — no deco
 | `EvmV1Decoder.getTransactionType` / `isValidTransactionType` | on chain | rejects transaction types the decoder cannot handle |
 | `EvmV1Decoder.decodeReceiptFields` | on chain | receipt status + logs, decoded from the *verified* bytes |
 | `EvmV1Decoder.getLogsByEventSignature` | on chain | filters to `AnswerUpdated` |
-| `chainInfo.getSupportedChains` / `getSupportedChainByKey` | CLI | confirms chain key 3 really is Ethereum mainnet |
-| `chainInfo.getLatestAttestedHeightAndHash` | CLI | attestation tip, and the measured lag |
-| `chainInfo.getContinuityBounds` | CLI | proves deep history is covered before trying a 2023 round |
-| `chainInfo.getAttestationGenesisHeight` | CLI | probed — and found to be ambiguous, see below |
+| `chainInfo.getLatestAttestedHeightAndHash` | CLI | picks a round at or below the attested tip |
 | `ProofBuilder.waitUntilHeightAttested` | CLI | blocks until the round's block is attested |
 | `ProofBuilder.getProof` | CLI | fetches inclusion + continuity proof |
 | `PrecompileBlockProver.verifySingle` | CLI (`eth_call`) | pre-flight; we never submit when it is false |
-| `PrecompileBlockProver.computeTransactionIndex` | CLI | cross-checks the prover's own `txIndex` |
 | `utils.gas.MAX_GAS_CAP` / `gasAsPercentageOfMax` | CLI | every gas number in this README |
 | precompile `TransactionVerified` event | CLI | read back out of each receipt as proof of work done |
+
+**On `npm run pf -- spike` only** — used to establish the facts in `docs/05`, not on the hot path:
+
+| Surface | What it established |
+|---|---|
+| `chainInfo.getSupportedChains` / `getSupportedChainByKey` | chain key 3 really is Ethereum mainnet (chainId 1) |
+| `chainInfo.getContinuityBounds` | deep history is covered — the basis for trying a 2023 round at all |
+| `chainInfo.getAttestationGenesisHeight` | probed, and found **ambiguous** (returns 0); replaced as the branch decider |
+| `PrecompileBlockProver.computeTransactionIndex` | cross-checks the prover's own `txIndex` off chain |
+
+**On `pf claim`:** everything in the first table, plus `PegGuard.proveAndClaim`, which calls
+`recordRound` and settles in one transaction.
 
 ### Why `recordRound` instead of `execute`
 

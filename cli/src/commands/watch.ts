@@ -14,6 +14,7 @@ import { dirname, resolve } from 'node:path';
 import {
   dryRun,
   fetchProof,
+  getLatestAttested,
   makeBlockProver,
   makeChainInfo,
   makeProofBuilder,
@@ -147,7 +148,7 @@ export async function watch(argv: readonly string[]): Promise<number> {
               `${new Date(Number(l.updatedAt) * 1000).toISOString()}`,
           );
           try {
-            const attested = await ci.getLatestAttestedHeightAndHash(chainKey);
+            const attested = await getLatestAttested(ci, chainKey);
             if (l.blockNumber > attested.height) {
               log.info(
                 `block ${l.blockNumber.toLocaleString()} not attested yet (tip ${attested.height.toLocaleString()}) — waiting`,

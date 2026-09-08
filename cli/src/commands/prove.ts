@@ -9,6 +9,7 @@ import { Contract, Interface, type ContractTransactionReceipt } from 'ethers';
 import {
   dryRun,
   fetchProof,
+  getLatestAttested,
   makeBlockProver,
   makeChainInfo,
   makeProofBuilder,
@@ -150,7 +151,7 @@ export async function prove(argv: readonly string[]): Promise<number> {
     txHash = txArg;
     log.info(`using explicit tx ${txHash}`);
   } else {
-    const attested = await ci.getLatestAttestedHeightAndHash(chainKey);
+    const attested = await getLatestAttested(ci, chainKey);
     expectedRound = await findLatestProvableRound(cfg, feed, attested.height, lookback);
     if (!expectedRound) {
       log.error(`no AnswerUpdated log found for ${feed.aggregator} in the last ${lookback} blocks`);
