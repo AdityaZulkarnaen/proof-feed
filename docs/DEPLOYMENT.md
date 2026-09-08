@@ -78,7 +78,31 @@ On the current `PegGuard` at `0xc836457AD046a329E93e40A4B747E90ee53B85bC`:
 | `configurePool` USDC/USD | `0x3ed4bd33421b59ec88a224b027a82368e92a9ffd5a6ab44bccc8313fdf731baa` | — |
 | `deposit` 200 CTC (ETH/USD pool) | `0x709f45fa0f21d906bacbf579ef4a7b99b016c8a7d79a81a426151ca9df9d41bd` | 243,180 |
 | `buyCover` policy 0 — strike $2736.21, notional 50 CTC, 7 days, premium 0.0583333 CTC | `0x5def8f253acb9ca8df10c90f234b7aa5027f20b718dc7011b3395bef9d372657` | 192,632 |
-| `claim` / `proveAndClaim` → `ClaimPaid` | _pending — waiting for the next ETH/USD round_ | |
+| **`proveAndClaim` → `ClaimPaid`** | `0xb90dda642a3e77ab296ffdc0dd4521e6225b2653a301dc162123ac0a3776e39c` | **374,374** |
+
+That single transaction contains all four events, in order:
+`TransactionVerified(3, 25930684, 0)` from the precompile → `RoundProven` → `LatestRoundUpdated`
+→ `ClaimPaid(policyId 0, roundId 129127208515966894720, holder …97D7, 50 CTC)`.
+
+The breaching round: ETH/USD **$2474.22860000** at 2026-09-08T05:53:59Z, mainnet block 25,930,684,
+tx `0x2f0aead47a7638027a5dce7225d7738d88593ad388955a8b3ac604b01c083896` — below the $2736.21 strike
+and inside the coverage window. Nobody approved the payout; the round did.
+
+Holder balance moved **9599.877471 → 9649.877284 CTC** (+49.999813 net of gas on a 50 CTC notional).
+
+Pool state after settlement, read back on chain:
+
+| Field | Value | Check |
+|---|---|---|
+| `balance` | 150.058333333333333333 CTC | 200 deposited + 0.0583333 premium − 50 paid out, exact |
+| `locked` | 0 | capacity released by the claim |
+| `totalShares` | 200 | unchanged — a claim does not burn LP shares |
+| contract CTC balance | 150.058333333333333333 | equals `balance` to the wei: solvent |
+| policy 0 | `CLAIMED`, `claimRoundId = 129127208515966894720` | pays at most once (INV-08) |
+
+Note the `prover` field in that `RoundProven` is the PegGuard contract, not the wallet — because
+`proveAndClaim` is what called `recordRound`. Anyone may pay that gas (INV-09: the payout still goes
+to `policy.holder`).
 
 On the superseded `PegGuard` at `0xB1aBE0D450B778fDb32Df54bb529F72d531ae8CE` (kept for history):
 `configurePool` `0xbe1e8dc0…`, `0x0e3c7e70…`; `deposit` `0x273d8b44…` (242,634 gas);

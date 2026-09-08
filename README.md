@@ -94,6 +94,22 @@ precompile at `0x…0FD2`, and `RoundProven(answer=88000000, updatedAt=167852108
 Proving the 2023 round *after* the 2026 one did **not** move `latestRoundId` backwards — the
 monotonicity invariant, observed on chain rather than only in tests.
 
+### A claim settled by proof — one transaction, no adjuster
+
+| | |
+|---|---|
+| Policy | pay 50 CTC if ETH/USD prints below $2736.21 within 7 days |
+| Breaching round | **$2474.22860000** at 2026-09-08T05:53:59Z |
+| Mainnet block / tx | `25,930,684` / [`0x2f0aead4…3896`](https://etherscan.io/tx/0x2f0aead47a7638027a5dce7225d7738d88593ad388955a8b3ac604b01c083896) |
+| **Creditcoin `proveAndClaim`** | [`0xb90dda64…e39c`](https://creditcoin-testnet.blockscout.com/tx/0xb90dda642a3e77ab296ffdc0dd4521e6225b2653a301dc162123ac0a3776e39c) |
+| Gas | 374,374 |
+| Payout | holder +49.999813 CTC (50 CTC notional, net of gas) |
+
+One transaction carries the whole chain of custody: `TransactionVerified` from the precompile →
+`RoundProven` from the registry → `ClaimPaid` from PegGuard. Afterwards the pool holds exactly
+200 deposited + 0.0583333 premium − 50 paid = **150.058333333333333333 CTC**, `locked` back to 0,
+and the contract's CTC balance equals its own accounting to the wei.
+
 ### Reading it as a Chainlink consumer
 
 ```console
