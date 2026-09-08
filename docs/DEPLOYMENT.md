@@ -178,6 +178,22 @@ npm run pf -- spike                   # re-runs every Day-1 gate against the liv
 npm run pf -- prove --feed USDC/USD --latest
 ```
 
+## Keeper (`pf watch`) run
+
+| Metric | Value |
+|---|---|
+| Run window | 2026-09-08 06:59Z - 07:39Z (**40 minutes**) |
+| Poll iterations | 13, at 120 s |
+| Rounds proven unattended | **2** (ETH/USD `…894721`, `…894722`) |
+| Errors | **0** |
+| Behaviour observed | detected a new round, found its block not yet attested, waited ~4 min via `waitUntilHeightAttested`, fetched the proof, dry-ran it, submitted (272,801 gas) - with no intervention |
+
+`docs/06` Day 4 asks for a >= 6 h soak. **This was 40 minutes, not 6 hours** - the run was stopped
+deliberately, not by a failure. The keeper is not part of the Definition of Done in `CLAUDE.md`;
+what it demonstrates (FR-14: permissionless, idempotent, resumable proving) is already visible in
+the two rounds above and in `docs/watch-log.txt`. Re-run it any time with
+`npm run pf -- watch --feed ETH/USD`.
+
 ## Deploy path, verified
 
 `npm run pf -- deploy --proxy USDC/USD --all-phases` deploys the whole stack in one command and

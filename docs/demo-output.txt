@@ -1,0 +1,44 @@
+
+
+
+
+
+[1m[36m==============================================================================
+ProofFeed — every price here is a proven Ethereum mainnet transaction
+==============================================================================[0m
+[34m[info] [0m registry  https://creditcoin-testnet.blockscout.com/address/0x89ab0ad8768CD06d0f3bc134ad2407705a49d309
+[34m[info] [0m adapter   https://creditcoin-testnet.blockscout.com/address/0x678C84Fe193a569FbDAF58e5f0d8f290a4072735
+[34m[info] [0m pegGuard  https://creditcoin-testnet.blockscout.com/address/0xc836457AD046a329E93e40A4B747E90ee53B85bC
+[34m[info] [0m there is no setPrice on any of them — see cli/test/abi.test.ts
+
+[1m[36m==============================================================================
+BRANCH H — importing the real 2023-03-11 USDC/USD depeg round ($0.88)
+==============================================================================[0m
+[35m[surface][0m [1mchainlink AggregatorProxy.{aggregator,phaseId,decimals,description}[0m [2m→[0m 0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6 -> "USDC / USD" phase 3, aggregator 0xc9E1a09622afdB659913fefE800fEaE5DBbFe9d7, 8 decimals
+[34m[info] [0m mainnet tx    https://etherscan.io/tx/0x24500a30910fb1a99de3c13eacb4e4dd05334e4078615dcf276c58dcfbddacd8
+[34m[info] [0m this is the SVB weekend: USDC lost its peg and Chainlink printed $0.88
+[32m[ok]   [0m already proven on Creditcoin: answer 0.88000000, Chainlink updatedAt 2023-03-11T07:51:23.000Z, provenAt 2026-09-07T18:44:15.000Z
+[32m[ok]   [0m adapter.getRoundData(36893488147419104215) -> 0.88000000 at 2023-03-11T07:51:23.000Z
+[34m[info] [0m a three-year-old Chainlink round, readable on Creditcoin through the Chainlink interface
+
+[1m[36m==============================================================================
+BRANCH L — PegGuard: a claim settled by proof, not by permission
+==============================================================================[0m
+[34m[info] [0m policy 0: "ETH / USD" strike 2736.21050420 notional 50.00 CTC window 2026-09-07T19:09:45.000Z..2026-09-14T19:09:45.000Z [CLAIMED] paid on round 129127208515966894720
+[34m[info] [0m 
+[34m[info] [0m to settle an ACTIVE policy: npm run pf -- claim --policy <id>
+[34m[info] [0m the claim is a proof, not a request: nobody approves it, the round does
+
+[1m[36m==============================================================================
+Registry state — read live from CC3
+==============================================================================[0m
+[32m[ok]   [0m "USDC / USD" latest proven round 55340232221128656026 = 0.99988765 (Chainlink updatedAt 2026-09-07T08:00:23.000Z, proven on Creditcoin 2026-09-07T18:42:45.000Z)
+[32m[ok]   [0m "ETH / USD" latest proven round 129127208515966894722 = 2476.65985171 (Chainlink updatedAt 2026-09-08T07:24:35.000Z, proven on Creditcoin 2026-09-08T07:33:00.000Z)
+
+[1m[36m==============================================================================
+Remove Attestcoin and this registry has no inputs.
+==============================================================================[0m
+[34m[info] [0m measured attestation lag at spike time: 7.2 min
+
+[1mSURFACES EXERCISED:[0m
+  • chainlink AggregatorProxy.{aggregator,phaseId,decimals,description}
