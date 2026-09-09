@@ -107,7 +107,7 @@ Namespaces: `encoding, queryBuilder, proofProvider, chainInfo, blockProver, util
 |---|---|---|
 | USDC/USD proxy | `0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6` | [OK] Etherscan "Chainlink: USDC/USD Price Feed" |
 | ETH/USD proxy | `0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419` | [OK] Etherscan "Chainlink: ETH/USD Price Feed" |
-| USDT/USD proxy | `0x3E7d1eAB13ad0104d2750B8863b489D65364e32D` | [VERIFY] |
+| USDT/USD proxy | `0x3E7d1eAB13ad0104d2750B8863b489D65364e32D` | **[OK] verified 2026-09-09 on mainnet**: `description()` = `"USDT / USD"`, `decimals()` = 8, `aggregator()` = `0x0d5F4aADf3fde31BBB55dB5F42C080F18aD54Df5`. |
 | Decimals | 8 (USD feeds) | [OK] general; confirm via `decimals()` |
 | Current aggregator | `proxy.aggregator()`; phase via `proxy.phaseId()`; past aggregators via `proxy.phaseAggregators(uint16)` | [OK] AggregatorProxy ABI |
 | Event we consume | `AnswerUpdated(int256 indexed current, uint256 indexed roundId, uint256 updatedAt)` emitted **by the aggregator contract, not the proxy** | **[D1]** the *current* USDC/USD aggregator emitted **6** of them in the last 20,000 blocks. **Q2 resolved: `AnswerUpdated` only — no `NewTransmission` decoder path is needed.** |
@@ -119,9 +119,9 @@ Namespaces: `encoding, queryBuilder, proofProvider, chainInfo, blockProver, util
 | Log layout | `topics[1] = int256 current` (as bytes32), `topics[2] = uint256 aggregatorRoundId`, `data = abi.encode(uint256 updatedAt)` | [OK] from signature (2 indexed + 1 non-indexed) |
 | Sibling events (not consumed) | `NewRound(uint256,address,uint256)` topic0 `0x0109fc6f55cf40689f02fbaad7af7fe7bbac8a3d2186600afc7d3e10cac60271`; `NewTransmission(uint32,int192,address,uint32,bytes,bytes,bytes32,uint40)` topic0 `0xab70da5573104158dc13ef16d8871863903098c07de08b26b6318bb68cbf4a03` | [OK] computed |
 | Proxy round id | `(phaseId << 64) | aggregatorRoundId` (uint80) | **[D1] CONFIRMED against live mainnet**: `proxy.latestRoundData().roundId` = `55340232221128656026`, and `(3 << 64) | 1178` = `55340232221128656026` exactly. Validates D-04 and test T-R15. |
-| Update triggers | USDC/USD: deviation 0.25%, heartbeat 24 h; ETH/USD: deviation 0.5%, heartbeat 1 h | [VERIFY on data.chain.link] |
+| Update triggers | **Heartbeats measured on chain 2026-09-09**, over the 20,000 blocks `25,920,198..25,940,198` (~2.8 days), reading `AnswerUpdated` straight off each live aggregator: **USDC/USD 6 rounds, longest gap 82,836 s = 23.01 h**; **ETH/USD 83 rounds, longest gap 3,660 s = 1.02 h**. So the heartbeats are 24 h and 1 h as assumed. | **[OK] for the heartbeat — and heartbeat is the only part this project relies on.** The *deviation* thresholds (0.25% / 0.5%) are **not** verifiable from logs in a calm market and are left as Chainlink's documented figures: `data.chain.link` refuses automated reads (403/429), and in this window USDC/USD never moved more than 0.0018% between rounds while ETH/USD updated on moves as small as 0.007%, which bounds nothing. Method: `cli/` + ethers `getLogs`; rerun with the snippet in docs/07 §"Static analysis and one-off measurements". |
 | Historical depeg (Branch H) | **[D1] EXACT TX LOCATED** — the low print came from the **phase-2** aggregator. Full details in §4a below. | **[D1]** |
-| Sepolia (Branch S) | ETH/USD `0x694AA1769357215DE4FAC081bf1f309aDC325306` [VERIFY]; but Branch S uses our own `MockAggregator` emitting `AnswerUpdated`, registered with chain key 1. | |
+| Sepolia (Branch S) | ETH/USD `0x694AA1769357215DE4FAC081bf1f309aDC325306` — **never verified, and deliberately so**: Branch S was the fallback that was not taken (D-05), and it would have used our own `MockAggregator` emitting `AnswerUpdated` under chain key 1 rather than this address. Nothing in the shipped system reads it. | **[N/A] fallback not taken** |
 | Tx type | Chainlink `transmit` txs are typically type 2 (EIP-1559); `EvmV1Decoder` supports types 0–4 | [OK] |
 
 ## 4a. The Branch H demo round — Day-1 verified [D1]
