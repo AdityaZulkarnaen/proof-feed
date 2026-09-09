@@ -98,17 +98,40 @@ monotonicity invariant, observed on chain rather than only in tests.
 
 | | |
 |---|---|
-| Policy | pay 50 CTC if ETH/USD prints below $2736.21 within 7 days |
-| Breaching round | **$2474.22860000** at 2026-09-08T05:53:59Z |
-| Mainnet block / tx | `25,930,684` / [`0x2f0aead4…3896`](https://etherscan.io/tx/0x2f0aead47a7638027a5dce7225d7738d88593ad388955a8b3ac604b01c083896) |
-| **Creditcoin `proveAndClaim`** | [`0xb90dda64…e39c`](https://creditcoin-testnet.blockscout.com/tx/0xb90dda642a3e77ab296ffdc0dd4521e6225b2653a301dc162123ac0a3776e39c) |
-| Gas | 374,374 |
-| Payout | holder +49.999813 CTC (50 CTC notional, net of gas) |
+| Policy | pay 50 CTC if ETH/USD prints below $2766.65 within 7 days |
+| Breaching round | **$2491.46085391** at 2026-09-09T05:46:47Z |
+| Mainnet block / tx | `25,937,816` / [`0xae0e83e1…c8a2`](https://etherscan.io/tx/0xae0e83e13386d4f1fbf3a7fa36349cb6d4d9533bceb0d193f6569c6f897ac8a2) |
+| **Creditcoin `proveAndClaim`** | [`0x9427273f…4e52`](https://creditcoin-testnet.blockscout.com/tx/0x9427273f95483be97491eee0010960710ab938865756de85855cb1cd7f4b4e52) |
+| Gas | 394,142 |
+| Payout | holder +49.999803 CTC (50 CTC notional, net of gas) |
+| Prover bounty | 0.011666666666666666 CTC accrued, [withdrawn separately](https://creditcoin-testnet.blockscout.com/tx/0xa3ca0e60de8f7b54c22fcbbd079a787816b705ff5d2ae80ecb5412dcab1d353d) |
 
-One transaction carries the whole chain of custody: `TransactionVerified` from the precompile →
-`RoundProven` from the registry → `ClaimPaid` from PegGuard. Afterwards the pool holds exactly
-200 deposited + 0.0583333 premium − 50 paid = **150.058333333333333333 CTC**, `locked` back to 0,
-and the contract's CTC balance equals its own accounting to the wei.
+One transaction carries the whole chain of custody, five events in order:
+`TransactionVerified` from the precompile → `RoundProven` → `LatestRoundUpdated` → `BountyAccrued`
+→ `ClaimPaid`. Afterwards the pool holds exactly 200 deposited + 0.0466666 kept premium − 50 paid =
+**150.046666666666666667 CTC**, `locked` back to 0, escrow empty, and the contract's CTC balance
+equals its own accounting to the wei.
+
+### The prover bounty (FR-20)
+
+A share of every premium — 20% on these pools — is carved **out of** the premium, so the buyer's
+cost is unchanged, and escrowed separately from pool liquidity. When a policy settles it accrues to
+whoever *first proved* the breaching round, which is what makes running the keeper the feed depends
+on worth someone's gas.
+
+Two decisions in there are load-bearing:
+
+- **The bounty follows the work, not the caller.** The registry already records a prover per round,
+  so a keeper running `pf watch` earns it even when somebody else settles the policy. On the
+  `proveAndClaim` path the recorded prover is PegGuard itself, so it falls through to the caller —
+  who did prove it, in that transaction.
+- **Pull payment, not push.** Pushing CTC to the prover inside `claim` would let a prover *contract*
+  that reverts on `receive` hold every holder's payout hostage. `claim` only credits a ledger;
+  `withdrawBounty()` collects. There is a test with a hostile prover asserting the holder is still
+  paid in full.
+
+Escrow is never pool liquidity: an LP cannot withdraw it, and a claim cannot spend it as notional.
+An unearned bounty returns to the pool when the policy expires.
 
 ### Reading it as a Chainlink consumer
 

@@ -80,20 +80,24 @@ export const CURRENT_ROUND = {
 export const CLAIM = {
   policyId: 0,
   feed: 'ETH / USD',
-  strike: 273_621_050_420n,
+  strike: 276_665_306_632n,
   notionalCtc: 50,
-  breachAnswer: 247_422_860_000n,
-  breachUpdatedAt: 1_788_846_839,
-  breachSourceBlock: 25_930_684,
-  breachSourceTx: '0x2f0aead47a7638027a5dce7225d7738d88593ad388955a8b3ac604b01c083896',
-  roundId: 129_127_208_515_966_894_720n,
-  tx: '0xb90dda642a3e77ab296ffdc0dd4521e6225b2653a301dc162123ac0a3776e39c',
-  gas: 374_374,
-  /** The four events that transaction emitted, in order. */
+  breachAnswer: 249_146_085_391n,
+  breachUpdatedAt: 1_788_932_807,
+  breachSourceBlock: 25_937_816,
+  breachSourceTx: '0xae0e83e13386d4f1fbf3a7fa36349cb6d4d9533bceb0d193f6569c6f897ac8a2',
+  roundId: 129_127_208_515_966_894_751n,
+  tx: '0x9427273f95483be97491eee0010960710ab938865756de85855cb1cd7f4b4e52',
+  gas: 394_142,
+  /** FR-20: escrowed out of the premium, accrued on settlement, withdrawn separately. */
+  bountyCtc: '0.011666666666666666',
+  bountyWithdrawTx: '0xa3ca0e60de8f7b54c22fcbbd079a787816b705ff5d2ae80ecb5412dcab1d353d',
+  /** The five events that transaction emitted, in order. */
   events: [
     { name: 'TransactionVerified', from: 'the 0xFD2 precompile' },
     { name: 'RoundProven', from: 'ProvenFeedRegistry' },
     { name: 'LatestRoundUpdated', from: 'ProvenFeedRegistry' },
+    { name: 'BountyAccrued', from: 'PegGuard' },
     { name: 'ClaimPaid', from: 'PegGuard' },
   ],
 } as const;

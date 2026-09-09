@@ -77,7 +77,7 @@ cast call 0x678C84Fe193a569FbDAF58e5f0d8f290a4072735 \
 
 **1:40 — Blockscout, the claim**
 
-`https://creditcoin-testnet.blockscout.com/tx/0xb90dda642a3e77ab296ffdc0dd4521e6225b2653a301dc162123ac0a3776e39c`
+`https://creditcoin-testnet.blockscout.com/tx/0x9427273f95483be97491eee0010960710ab938865756de85855cb1cd7f4b4e52`
 
 Four events in one transaction: `TransactionVerified` → `RoundProven` → `LatestRoundUpdated` →
 `ClaimPaid`.
@@ -108,5 +108,5 @@ Four events in one transaction: `TransactionVerified` → `RoundProven` → `Lat
 | Adapter | https://creditcoin-testnet.blockscout.com/address/0x678C84Fe193a569FbDAF58e5f0d8f290a4072735 |
 | PegGuard | https://creditcoin-testnet.blockscout.com/address/0x367693043C3E8396252728cAEBfBAB3fF43c78d5 |
 | 2023 depeg proven | https://creditcoin-testnet.blockscout.com/tx/0x51391915f812b640d8eafafdfd44205777d37d12d33c7319c9dc467b0f912d06 |
-| Claim paid | https://creditcoin-testnet.blockscout.com/tx/0xb90dda642a3e77ab296ffdc0dd4521e6225b2653a301dc162123ac0a3776e39c |
+| Claim paid | https://creditcoin-testnet.blockscout.com/tx/0x9427273f95483be97491eee0010960710ab938865756de85855cb1cd7f4b4e52 |
 | Source depeg tx (Etherscan) | https://etherscan.io/tx/0x24500a30910fb1a99de3c13eacb4e4dd05334e4078615dcf276c58dcfbddacd8 |

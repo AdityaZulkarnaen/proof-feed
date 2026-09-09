@@ -35,7 +35,8 @@ Explorer: `https://creditcoin-testnet.blockscout.com` — prefix any hash below 
 |---|---|---|---|
 | `ProvenFeedRegistry` | `0x89ab0ad8768CD06d0f3bc134ad2407705a49d309` | `0x49d8c38c12b31f73e1769379935bed6bdac25569365c44968007d3d1ff6edb8d` | yes |
 | `ProvenFeedAdapter` (USDC/USD) | `0x678C84Fe193a569FbDAF58e5f0d8f290a4072735` | `0x47b523e97bcd004e359301c900f12a029932a84d7dae2ffbc38a42b090d11ea8` | yes |
-| `PegGuard` | `0xc836457AD046a329E93e40A4B747E90ee53B85bC` | `0x25d5faaec4fe388ae09605e4c93e75060fcc6ae5ebf911040761fc030456d0d5` | yes |
+| `PegGuard` (FR-20, prover bounty) | `0x367693043C3E8396252728cAEBfBAB3fF43c78d5` | `0x39b82c409e3f3f48b0597847ea6edc3b59f03559da12cf064c3393599b2d07ea` | yes |
+| `PegGuard` (superseded by FR-20) | `0xc836457AD046a329E93e40A4B747E90ee53B85bC` | `0x25d5faaec4fe388ae09605e4c93e75060fcc6ae5ebf911040761fc030456d0d5` | yes |
 | `PegGuard` (superseded, see below) | `0xB1aBE0D450B778fDb32Df54bb529F72d531ae8CE` | `0x70aab9e57257fa81679f4754a2be991f3107dc9d5030eabaf79b6a2072839c74` | yes |
 | `ProbeASC` (Day-1 spike only, **not** part of the demo path) | `0x846D0C55a916e925331599bf086f9B203E68917B` | `0x154a414171c8e0e210f7f5a749d885972dbaa8bf0393d01bfde8c6e4d0c6b7f3` | yes |
 
@@ -49,6 +50,7 @@ Aggregator addresses were read from the live proxies at registration time by
 | USDC / USD | `0xb45d52f2002a2abc1f204eb800af7cbf074250de1f754f35254efca06f7b3256` | 3 | 3 (current) | `0xc9E1a09622afdB659913fefE800fEaE5DBbFe9d7` | `0xe545dee3f704d6094564febe48b0fcc33d068af155e7572dfb82a8bc395d5173` |
 | USDC / USD | same | 3 | 2 (historical) | `0x789190466E21a8b78b8027866CBBDc151542A26C` | `0x6600f68ff81acf6016bc0997358bb80c80d5bed4b7c8a19e1b7d2e1f85a6ecbe` |
 | ETH / USD | `0x62ddc8c5ffbd077b5a28e92efd10abcc58e66fb2a326401f0efd02e173ac1777` | 3 | 7 (current) | `0x7d4E742018fb52E48b08BE73d041C18B21de6Fb5` | `0x14120825b06788ad93c82b045e918f454a5d5224ffe1e7dd78bee96f34c471ae` |
+| USDT / USD (FR-22) | `0xf790b27ce47f4ec92e603d65b16f1ed25bd38cea1ec25e8fe439238ad19af514` | 3 | 3 (current) | `0x0d5F4aADf3fde31BBB55dB5F42C080F18aD54Df5` | `0x938f76ed2742eeb5d395f5ae8cb35447f72c53063f37b4681a252510f04809a7` |
 
 Registering two phases of USDC/USD under one `feedId` is what lets a 2023 round and a 2026 round
 coexist without colliding (D-04).
@@ -178,21 +180,55 @@ npm run pf -- spike                   # re-runs every Day-1 gate against the liv
 npm run pf -- prove --feed USDC/USD --latest
 ```
 
+## P1 — prover bounty (FR-20), lifecycle on the current PegGuard
+
+Run on `0x367693043C3E8396252728cAEBfBAB3fF43c78d5`, three pools configured at a 20% bounty share.
+
+| Step | Tx | Gas |
+|---|---|---|
+| `deposit` 200 CTC (ETH/USD) | `0x6e40dc1e7955fdbec1e43372be14dac2b4e685846a864bf5fa1a7080c5edcbe3` | — |
+| `buyCover` — strike $2766.65, 50 CTC, 7 days, premium 0.0583333 CTC | `0x1f842510a731c348e3ef7a0e3470ec5204c93fec3ef214c31359c0d3027d6962` | 237,897 |
+| **`proveAndClaim`** — five events incl. `BountyAccrued` | `0x9427273f95483be97491eee0010960710ab938865756de85855cb1cd7f4b4e52` | **394,142** |
+| `withdrawBounty` | `0xa3ca0e60de8f7b54c22fcbbd079a787816b705ff5d2ae80ecb5412dcab1d353d` | 125,776 |
+
+Breaching round: ETH/USD **$2491.46085391** at 2026-09-09T05:46:47Z, mainnet block 25,937,816,
+tx `0xae0e83e13386d4f1fbf3a7fa36349cb6d4d9533bceb0d193f6569c6f897ac8a2`.
+
+The premium split, verified on chain: premium **0.058333333333333333** CTC, of which
+**0.011666666666666666** (20%) was escrowed as bounty and **0.046666666666666667** reached the pool.
+`bountyEscrow()` read back exactly the escrowed figure while the policy was live, and zero after the
+withdrawal.
+
+Final accounting, read back after settlement:
+
+| Field | Value | Check |
+|---|---|---|
+| pool `balance` | 150.046666666666666667 CTC | 200 deposited + 0.0466666 kept premium − 50 paid, exact |
+| pool `locked` | 0 | released by the claim |
+| `bountyEscrow` | 0 | accrued, then withdrawn |
+| `bountyOwed(prover)` | 0 | cleared by the withdrawal |
+| contract CTC balance | 150.046666666666666667 | equals `balance` to the wei, escrow empty: solvent |
+
+Note which address earned it. The registry recorded PegGuard as the prover on the `proveAndClaim`
+path, so the bounty fell through to the caller who proved it in that same transaction — the designed
+behaviour, and the reason a keeper that proves a round separately still earns it.
+
 ## Keeper (`pf watch`) run
 
 | Metric | Value |
 |---|---|
-| Run window | 2026-09-08 06:59Z - 07:39Z (**40 minutes**) |
-| Poll iterations | 13, at 120 s |
-| Rounds proven unattended | **2** (ETH/USD `…894721`, `…894722`) |
-| Errors | **0** |
+| Run window | 2026-09-08 14:17Z - 2026-09-09 06:14Z (**~16 hours**) |
+| Poll iterations | 120 s interval, unattended overnight |
+| Rounds proven unattended | **8** |
+| Errors | **1**, recovered |
 | Behaviour observed | detected a new round, found its block not yet attested, waited ~4 min via `waitUntilHeightAttested`, fetched the proof, dry-ran it, submitted (272,801 gas) - with no intervention |
 
-`docs/06` Day 4 asks for a >= 6 h soak. **This was 40 minutes, not 6 hours** - the run was stopped
-deliberately, not by a failure. The keeper is not part of the Definition of Done in `CLAUDE.md`;
-what it demonstrates (FR-14: permissionless, idempotent, resumable proving) is already visible in
-the two rounds above and in `docs/watch-log.txt`. Re-run it any time with
-`npm run pf -- watch --feed ETH/USD`.
+`docs/06` Day 4 asks for a **>= 6 h** soak. This run was ~16 hours and satisfies it.
+
+The single error is the designed failure path, not a crash: `Timeout waiting for height 25933335 to
+be attested on chain key 3`. One round's block did not attest inside the 20-minute wait, the keeper
+logged it and continued to the next iteration, proving seven more rounds afterwards. Full log in
+`docs/watch-log.txt`. Re-run with `npm run pf -- watch --feed ETH/USD`.
 
 ## Deploy path, verified
 

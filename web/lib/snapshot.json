@@ -1,6 +1,6 @@
 {
   "note": "Committed fallback. Shown, labelled `cached`, only when the live CC3 read fails. Refresh with node scripts/refresh-snapshot.mjs",
-  "readAt": "2026-09-08T08:50:30.798Z",
+  "readAt": "2026-09-09T06:19:39.996Z",
   "feeds": [
     {
       "description": "USDC / USD",
@@ -12,18 +12,20 @@
     },
     {
       "description": "ETH / USD",
-      "roundId": "129127208515966894722",
-      "answer": "247665985171",
+      "roundId": "129127208515966894751",
+      "answer": "249146085391",
       "decimals": 8,
-      "updatedAt": 1788852275,
-      "provenAt": 1788852780
+      "updatedAt": 1788932807,
+      "provenAt": 1788934620
     }
   ],
   "policy": {
     "status": "CLAIMED",
-    "claimRoundId": "129127208515966894720",
+    "claimRoundId": "129127208515966894751",
     "notionalWei": "50000000000000000000",
-    "poolBalanceWei": "150058333333333333333",
-    "poolLockedWei": "0"
+    "poolBalanceWei": "150046666666666666667",
+    "poolLockedWei": "0",
+    "proverBountyBps": 2000,
+    "bountyEscrowWei": "0"
   }
 }

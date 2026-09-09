@@ -10,7 +10,7 @@ import { writeFileSync } from 'node:fs';
 
 const RPC = 'https://rpc.cc3-testnet.creditcoin.network';
 const REGISTRY = '0x89ab0ad8768CD06d0f3bc134ad2407705a49d309';
-const PEGGUARD = '0xc836457AD046a329E93e40A4B747E90ee53B85bC';
+const PEGGUARD = '0x367693043C3E8396252728cAEBfBAB3fF43c78d5';
 
 const FEEDS = [
   { id: '0xb45d52f2002a2abc1f204eb800af7cbf074250de1f754f35254efca06f7b3256', description: 'USDC / USD', decimals: 8 },
@@ -22,8 +22,9 @@ const registry = new Contract(REGISTRY, [
   'function latestRoundData(bytes32 feedId) view returns (uint80,int256,uint64,uint64)',
 ], rpc);
 const pegGuard = new Contract(PEGGUARD, [
-  'function getPolicy(uint256) view returns (tuple(bytes32 feedId, address holder, int256 strike, uint128 notional, uint128 premiumPaid, uint64 start, uint64 expiry, uint8 status, uint80 claimRoundId))',
-  'function getPool(bytes32) view returns (tuple(uint256 balance, uint256 locked, uint256 totalShares, uint16 premiumBpsPer30d, uint32 waitingPeriod, uint128 maxNotional, bool active))',
+  'function getPolicy(uint256) view returns (tuple(bytes32 feedId, address holder, int256 strike, uint128 notional, uint128 premiumPaid, uint64 start, uint64 expiry, uint8 status, uint80 claimRoundId, uint128 proverBounty))',
+  'function getPool(bytes32) view returns (tuple(uint256 balance, uint256 locked, uint256 totalShares, uint16 premiumBpsPer30d, uint32 waitingPeriod, uint128 maxNotional, bool active, uint16 proverBountyBps))',
+  'function bountyEscrow() view returns (uint256)',
 ], rpc);
 
 const STATUS = ['NONE', 'ACTIVE', 'CLAIMED', 'EXPIRED'];
@@ -43,6 +44,7 @@ for (const feed of FEEDS) {
 
 const policyRaw = await pegGuard.getPolicy(0);
 const poolRaw = await pegGuard.getPool(FEEDS[1].id);
+const escrowRaw = await pegGuard.bountyEscrow();
 
 const out = {
   note: 'Committed fallback. Shown, labelled `cached`, only when the live CC3 read fails. Refresh with node scripts/refresh-snapshot.mjs',
@@ -54,6 +56,8 @@ const out = {
     notionalWei: policyRaw.notional.toString(),
     poolBalanceWei: poolRaw.balance.toString(),
     poolLockedWei: poolRaw.locked.toString(),
+    proverBountyBps: Number(poolRaw.proverBountyBps),
+    bountyEscrowWei: escrowRaw.toString(),
   },
 };
 
