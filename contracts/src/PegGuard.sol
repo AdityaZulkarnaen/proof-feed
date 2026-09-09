@@ -31,6 +31,18 @@ contract PegGuard is Ownable2Step, ReentrancyGuard {
         EXPIRED
     }
 
+    /// @notice How a breached policy settles (FR-30).
+    /// @dev `FULL` pays the whole notional on any breach, however small — a pure trigger. Under
+    ///      `PROPORTIONAL` the payout tracks the depth of the breach,
+    ///      `notional × (strike − answer) / strike`, which is what a holder hedging an actual
+    ///      position wants: a 5% depeg pays 5%. Proportional can never pay more than `FULL`, so
+    ///      it is written at its own, lower rate (`Pool.proportionalBpsPer30d`); charging both the
+    ///      same would leave nobody with a reason to buy it.
+    enum PayoutMode {
+        FULL,
+        PROPORTIONAL
+    }
+
     /// @param balance Total native CTC held for this feed's pool (deposits + premiums − payouts).
     /// @param locked Portion of `balance` reserved against live policies.
     /// @param totalShares LP share supply.
@@ -41,6 +53,8 @@ contract PegGuard is Ownable2Step, ReentrancyGuard {
     /// @param proverBountyBps Share of each premium, in basis points, carved out and escrowed as a
     ///        bounty for whoever proves the breaching round (FR-20). Taken OUT of the premium, not
     ///        added on top, so a buyer's cost is unchanged by the incentive.
+    /// @param proportionalBpsPer30d Rate for `PayoutMode.PROPORTIONAL` cover (FR-30). Zero means
+    ///        this pool does not write proportional cover at all.
     struct Pool {
         uint256 balance;
         uint256 locked;
@@ -50,6 +64,7 @@ contract PegGuard is Ownable2Step, ReentrancyGuard {
         uint128 maxNotional;
         bool active;
         uint16 proverBountyBps;
+        uint16 proportionalBpsPer30d;
     }
 
     /// @param feedId The ProofFeed feed this policy is written against.
@@ -61,6 +76,8 @@ contract PegGuard is Ownable2Step, ReentrancyGuard {
     /// @param expiry Last source-chain timestamp a breaching round may carry.
     /// @param status Lifecycle state.
     /// @param claimRoundId The round that paid this policy, once claimed.
+    /// @param mode Whether a breach pays the full notional or in proportion to its depth (FR-30).
+    /// @param payout What was actually paid. Zero until CLAIMED; equals `notional` under `FULL`.
     struct Policy {
         bytes32 feedId;
         address holder;
@@ -72,6 +89,8 @@ contract PegGuard is Ownable2Step, ReentrancyGuard {
         Status status;
         uint80 claimRoundId;
         uint128 proverBounty;
+        PayoutMode mode;
+        uint128 payout;
     }
 
     /// @notice The registry of proven rounds. Immutable: PegGuard's only source of truth.
@@ -95,6 +114,8 @@ contract PegGuard is Ownable2Step, ReentrancyGuard {
         bytes32 indexed feedId, uint16 premiumBpsPer30d, uint32 waitingPeriod, uint128 maxNotional, bool active
     );
     event PoolBountyConfigured(bytes32 indexed feedId, uint16 proverBountyBps);
+    /// @notice The pool's proportional-cover rate changed (FR-30). Zero disables the mode.
+    event PoolProportionalConfigured(bytes32 indexed feedId, uint16 proportionalBpsPer30d);
     event Deposited(bytes32 indexed feedId, address indexed lp, uint256 amount, uint256 shares);
     event Withdrawn(bytes32 indexed feedId, address indexed lp, uint256 amount, uint256 shares);
     event CoverBought(
@@ -105,13 +126,18 @@ contract PegGuard is Ownable2Step, ReentrancyGuard {
         uint128 notional,
         uint256 premium,
         uint64 start,
-        uint64 expiry
+        uint64 expiry,
+        PayoutMode mode
     );
+    /// @notice A policy settled. `payout` equals the notional under `FULL` and is the
+    ///         breach-weighted share of it under `PROPORTIONAL` (FR-30); `released` is the rest of
+    ///         the reserved notional handed back to the pool.
     event ClaimPaid(
         uint256 indexed policyId,
         uint80 indexed roundId,
         address indexed holder,
-        uint256 notional,
+        uint256 payout,
+        uint256 released,
         address caller
     );
     event PolicyExpired(uint256 indexed policyId, bytes32 indexed feedId, uint128 notionalReleased);
@@ -158,6 +184,10 @@ contract PegGuard is Ownable2Step, ReentrancyGuard {
     error NothingOwed(address prover);
     /// @notice The bounty share must leave something for the pool.
     error InvalidBountyShare(uint16 bps);
+    /// @notice This pool does not write proportional cover (its proportional rate is zero).
+    error ProportionalCoverUnavailable(bytes32 feedId);
+    /// @notice The breach was too shallow to pay a single wei against this notional (FR-30).
+    error PayoutTooSmall(int256 answer, int256 strike);
     /// @notice Every unit of this pool was paid out; the shares still outstanding are worthless.
     error PoolWipedOut(bytes32 feedId);
     /// @notice No such policy id.
@@ -183,7 +213,8 @@ contract PegGuard is Ownable2Step, ReentrancyGuard {
         uint32 waitingPeriod,
         uint128 maxNotional,
         bool active,
-        uint16 proverBountyBps
+        uint16 proverBountyBps,
+        uint16 proportionalBpsPer30d
     ) external onlyOwner {
         if (REGISTRY.getFeed(feedId).emitter == address(0)) revert UnknownFeed(feedId);
         // A full-premium bounty would leave the pool underwriting for nothing.
@@ -194,8 +225,10 @@ contract PegGuard is Ownable2Step, ReentrancyGuard {
         p.maxNotional = maxNotional;
         p.active = active;
         p.proverBountyBps = proverBountyBps;
+        p.proportionalBpsPer30d = proportionalBpsPer30d;
         emit PoolConfigured(feedId, premiumBpsPer30d, waitingPeriod, maxNotional, active);
         emit PoolBountyConfigured(feedId, proverBountyBps);
+        emit PoolProportionalConfigured(feedId, proportionalBpsPer30d);
     }
 
     // ── Liquidity ────────────────────────────────────────────────────────────────────────────────
@@ -253,15 +286,30 @@ contract PegGuard is Ownable2Step, ReentrancyGuard {
 
     // ── Cover ────────────────────────────────────────────────────────────────────────────────────
 
-    /// @notice Premium for a given notional and duration.
+    /// @notice Premium for full-payout cover of a given notional and duration.
     /// @dev `notional × premiumBpsPer30d × durationDays / 30 / 10_000`.
     function quote(bytes32 feedId, uint256 notional, uint256 durationDays)
         public
         view
         returns (uint256 premium)
     {
+        return quoteFor(feedId, notional, durationDays, PayoutMode.FULL);
+    }
+
+    /// @notice Premium for either payout mode (FR-30).
+    /// @dev Proportional cover pays at most what full cover pays, so it is written at its own rate.
+    ///      A pool with `proportionalBpsPer30d == 0` does not offer the mode; quoting it reverts
+    ///      rather than returning a free premium.
+    function quoteFor(bytes32 feedId, uint256 notional, uint256 durationDays, PayoutMode mode)
+        public
+        view
+        returns (uint256 premium)
+    {
         if (durationDays == 0 || durationDays > 365) revert InvalidDuration(durationDays);
-        return (notional * _pools[feedId].premiumBpsPer30d * durationDays) / 30 / 10_000;
+        Pool storage p = _pools[feedId];
+        uint16 rate = mode == PayoutMode.FULL ? p.premiumBpsPer30d : p.proportionalBpsPer30d;
+        if (mode == PayoutMode.PROPORTIONAL && rate == 0) revert ProportionalCoverUnavailable(feedId);
+        return (notional * rate * durationDays) / 30 / 10_000;
     }
 
     /// @notice The share of that premium escrowed as a prover bounty (FR-20).
@@ -271,7 +319,31 @@ contract PegGuard is Ownable2Step, ReentrancyGuard {
         view
         returns (uint256 bounty)
     {
-        return (quote(feedId, notional, durationDays) * _pools[feedId].proverBountyBps) / 10_000;
+        return quoteBountyFor(feedId, notional, durationDays, PayoutMode.FULL);
+    }
+
+    /// @notice The prover bounty carved out of either mode's premium (FR-20 × FR-30).
+    function quoteBountyFor(bytes32 feedId, uint256 notional, uint256 durationDays, PayoutMode mode)
+        public
+        view
+        returns (uint256 bounty)
+    {
+        return (quoteFor(feedId, notional, durationDays, mode) * _pools[feedId].proverBountyBps) / 10_000;
+    }
+
+    /// @notice What a policy would pay if `answer` breached its strike (FR-30).
+    /// @dev Pure, so a front-end or a keeper can show the number before anything is settled.
+    ///      Integer division floors, which rounds in the pool's favour by at most one wei.
+    function payoutFor(PayoutMode mode, uint128 notional, int256 strike, int256 answer)
+        public
+        pure
+        returns (uint256)
+    {
+        if (mode == PayoutMode.FULL) return notional;
+        // A negative or zero print is a total loss against any positive strike.
+        if (answer <= 0) return notional;
+        if (answer >= strike) return 0;
+        return (uint256(notional) * uint256(strike - answer)) / uint256(strike);
     }
 
     /// @notice Buy cover. Pays `notional` if the feed prints below `strike` inside the window.
@@ -286,6 +358,37 @@ contract PegGuard is Ownable2Step, ReentrancyGuard {
         nonReentrant
         returns (uint256 policyId)
     {
+        return _buyCover(feedId, strike, notional, durationDays, PayoutMode.FULL);
+    }
+
+    /// @notice Buy cover, choosing how a breach settles (FR-30).
+    /// @dev `PayoutMode.PROPORTIONAL` pays `notional × (strike − answer) / strike` instead of the
+    ///      whole notional, at the pool's own proportional rate. The pool still reserves the full
+    ///      notional — that is its worst case — and hands the unused part back when the claim
+    ///      settles, so LP capital is never under-reserved.
+    /// @param feedId The feed to cover.
+    /// @param strike Trigger price in feed decimals.
+    /// @param notional Maximum payout in wei of native CTC.
+    /// @param durationDays Coverage length, counted from the end of the waiting period.
+    /// @param mode Full payout or breach-weighted payout.
+    /// @return policyId The new policy's id.
+    function buyCover(
+        bytes32 feedId,
+        int256 strike,
+        uint128 notional,
+        uint256 durationDays,
+        PayoutMode mode
+    ) external payable nonReentrant returns (uint256 policyId) {
+        return _buyCover(feedId, strike, notional, durationDays, mode);
+    }
+
+    function _buyCover(
+        bytes32 feedId,
+        int256 strike,
+        uint128 notional,
+        uint256 durationDays,
+        PayoutMode mode
+    ) private returns (uint256 policyId) {
         Pool storage p = _pools[feedId];
         if (!p.active) revert PoolInactive(feedId);
         if (strike <= 0) revert InvalidStrike(strike);
@@ -294,7 +397,7 @@ contract PegGuard is Ownable2Step, ReentrancyGuard {
         uint256 freeLiquidity = p.balance - p.locked;
         if (notional > freeLiquidity) revert InsufficientCapacity(freeLiquidity, notional);
 
-        uint256 premium = quote(feedId, notional, durationDays);
+        uint256 premium = quoteFor(feedId, notional, durationDays, mode);
         if (msg.value != premium) revert WrongPremium(premium, msg.value);
 
         // FR-20: the bounty is carved OUT of the premium and escrowed, so it is never part of pool
@@ -321,11 +424,13 @@ contract PegGuard is Ownable2Step, ReentrancyGuard {
                 expiry: expiry,
                 status: Status.ACTIVE,
                 claimRoundId: 0,
-                proverBounty: uint128(bounty)
+                proverBounty: uint128(bounty),
+                mode: mode,
+                payout: 0
             })
         );
 
-        emit CoverBought(policyId, feedId, msg.sender, strike, notional, premium, start, expiry);
+        emit CoverBought(policyId, feedId, msg.sender, strike, notional, premium, start, expiry, mode);
     }
 
     /// @notice Settle a policy against an already-proven round.
@@ -427,15 +532,25 @@ contract PegGuard is Ownable2Step, ReentrancyGuard {
         }
         if (r.answer >= p.strike) revert StrikeNotBreached(r.answer, p.strike);
 
-        // Effects before the transfer (INV-08: a policy can pay at most once).
+        // FR-30. The payout is decided here, from the proven answer and the policy's own mode —
+        // never from a parameter. `FULL` pays the notional; `PROPORTIONAL` pays the breach's depth.
         uint128 notional = p.notional;
+        uint128 payout = uint128(payoutFor(p.mode, notional, p.strike, r.answer));
+        // A breach so shallow it rounds to nothing must not consume the policy: leaving it ACTIVE
+        // lets the holder claim on a deeper round later, and costs the pool nothing.
+        if (payout == 0) revert PayoutTooSmall(r.answer, p.strike);
+
+        // Effects before the transfer (INV-08: a policy can pay at most once).
         address holder = p.holder;
         p.status = Status.CLAIMED;
         p.claimRoundId = roundId;
+        p.payout = payout;
 
+        // The whole notional was reserved as the worst case, so all of it unlocks. Only what was
+        // actually paid leaves the pool; the remainder becomes free liquidity again (INV-07).
         Pool storage pool = _pools[p.feedId];
         pool.locked -= notional;
-        pool.balance -= notional;
+        pool.balance -= payout;
 
         // FR-20. The registry records who first proved each round, so the bounty follows the work
         // rather than the caller: a keeper running `pf watch` earns it even when somebody else
@@ -451,8 +566,8 @@ contract PegGuard is Ownable2Step, ReentrancyGuard {
         }
 
         // Interaction. INV-09: the holder is paid regardless of who called.
-        _pay(holder, notional);
-        emit ClaimPaid(policyId, roundId, holder, notional, msg.sender);
+        _pay(holder, payout);
+        emit ClaimPaid(policyId, roundId, holder, payout, notional - payout, msg.sender);
     }
 
     function _pay(address to, uint256 amount) private {

@@ -2,11 +2,13 @@ import { DrumRecord } from '../components/DrumRecord';
 import { ctc, readChainState } from '../lib/chain';
 import {
   ANSWER_UPDATED_TOPIC,
+  BATCH,
   CHAIN,
   CLAIM,
   CONTRACTS,
   CURRENT_ROUND,
   DEPEG,
+  PROPORTIONAL_CLAIM,
   REPO,
   SOURCE_CHAIN,
   address,
@@ -233,6 +235,158 @@ export default async function Page() {
             </>
           )}
         </div>
+      </section>
+
+      {/* ── Two payout modes (FR-30) ────────────────────────────────────────────────────────── */}
+      <section className="section shell">
+        <div className="sectionHead">
+          <h2 style={{ fontSize: 'clamp(1.5rem, 3vw, 2rem)' }}>The same round, paid two ways</h2>
+          <p className="prose">
+            A second policy was written at the identical strike and the identical{' '}
+            {CLAIM.notionalCtc} CTC notional, differing only in how a breach settles — and both were
+            claimed against that one proven round. Full cover is a trigger: any breach, however
+            shallow, pays everything. Proportional cover pays the depth of the breach, which is what
+            somebody hedging an actual position wants. It pays strictly less, so it costs less.
+          </p>
+        </div>
+
+        <div className="rows">
+          <Row label="Full payout">
+            <span className="reading" style={{ fontSize: '1.5rem' }}>
+              {PROPORTIONAL_CLAIM.fullPayoutCtc} CTC
+            </span>
+            <span className="stationLabel">
+              premium {PROPORTIONAL_CLAIM.fullPremiumCtc} CTC · {PROPORTIONAL_CLAIM.fullBps} bps / 30d
+            </span>
+          </Row>
+          <Row label="Proportional payout">
+            <span className="reading" style={{ fontSize: '1.5rem', color: 'var(--amber)' }}>
+              {PROPORTIONAL_CLAIM.payoutCtc} CTC
+            </span>
+            <span className="stationLabel">
+              premium {PROPORTIONAL_CLAIM.premiumCtc} CTC ·{' '}
+              {PROPORTIONAL_CLAIM.proportionalBps} bps / 30d
+            </span>
+            <span className="stationLabel">
+              notional × (strike − answer) ÷ strike
+            </span>
+          </Row>
+          <Row label="Returned to the pool">
+            <span className="reading" style={{ fontSize: '1.125rem' }}>
+              {PROPORTIONAL_CLAIM.releasedCtc} CTC
+            </span>
+            <span className="stationLabel">
+              the pool reserves the whole notional either way — that is its worst case — and hands
+              back what the breach did not claim
+            </span>
+          </Row>
+          <Row label="claim">
+            <a className="hash" href={tx(PROPORTIONAL_CLAIM.tx)} target="_blank" rel="noreferrer">
+              {shortHash(PROPORTIONAL_CLAIM.tx)}
+            </a>
+            <span className="stationLabel">
+              {PROPORTIONAL_CLAIM.gas.toLocaleString()} gas · the round was already proven, so no
+              second proof was paid for
+            </span>
+          </Row>
+          {state.policy && (
+            <Row label="Read back just now">
+              <span className="reading" style={{ fontSize: '1.125rem' }}>
+                {state.policy.proportional.status}
+              </span>
+              <span className="stationLabel">
+                policy 1, {state.policy.proportional.mode.toLowerCase()}, paid{' '}
+                {ctc(state.policy.proportional.payoutWei, 18)} CTC of{' '}
+                {ctc(state.policy.proportional.notionalWei, 0)}
+              </span>
+            </Row>
+          )}
+        </div>
+      </section>
+
+      {/* ── Batch proving (FR-32) ───────────────────────────────────────────────────────────── */}
+      <section className="section shell">
+        <div className="sectionHead">
+          <h2 style={{ fontSize: 'clamp(1.5rem, 3vw, 2rem)' }}>Three rounds, one proof</h2>
+          <p className="prose">
+            A proof carries a continuity chain from the nearest attestation checkpoint down to the
+            block it proves. The batch endpoint returns <strong>one</strong> chain for a whole set of
+            transactions, and the precompile has an overload that takes exactly that shape — so three
+            Chainlink rounds from a single volatility burst landed in one Creditcoin transaction.
+          </p>
+        </div>
+
+        <div className="rows">
+          <Row label="recordRoundBatch">
+            <a className="hash" href={tx(BATCH.tx)} target="_blank" rel="noreferrer">
+              {shortHash(BATCH.tx)}
+            </a>
+            <span className="stationLabel">
+              {BATCH.gas.toLocaleString()} gas · against {BATCH.separateGas.toLocaleString()} proving
+              them one at a time
+            </span>
+          </Row>
+          <Row label="What it spanned">
+            <span className="reading" style={{ fontSize: '1.125rem' }}>
+              {BATCH.spanBlocks} blocks
+            </span>
+            <span className="stationLabel">
+              mainnet {BATCH.fromBlock.toLocaleString()}–{BATCH.toBlock.toLocaleString()}, two of the
+              three in the same block · {BATCH.sharedRoots} shared continuity roots
+            </span>
+          </Row>
+          <Row label="Events">
+            <span className="stationLabel">
+              {BATCH.rounds} × TransactionVerified from the 0xFD2 precompile and {BATCH.rounds} ×
+              RoundProven from the registry, from a single call
+            </span>
+          </Row>
+        </div>
+
+        <p className="prose" style={{ marginTop: '2.5rem' }}>
+          <strong>It is not automatically cheaper, and pretending otherwise would be dishonest.</strong>{' '}
+          A shared chain has to reach from the first block in the set to the last, while each single
+          proof only reaches its own checkpoint about a hundred blocks away. So the win depends on how
+          clustered the rounds are, not on how many there are:
+        </p>
+
+        <div className="ledgerScroll" style={{ marginTop: '1.5rem' }}>
+          <table className="ledger">
+            <thead>
+              <tr>
+                <th scope="col">Rounds</th>
+                <th scope="col">Span</th>
+                <th scope="col">Separately</th>
+                <th scope="col">Batched</th>
+                <th scope="col">Difference</th>
+              </tr>
+            </thead>
+            <tbody>
+              {BATCH.comparisons.map((c) => {
+                const delta = ((c.batched - c.separate) / c.separate) * 100;
+                const cheaper = delta < 0;
+                return (
+                  <tr key={`${c.rounds}-${c.span}`}>
+                    <td>{c.rounds}</td>
+                    <td>{c.span.toLocaleString()} blocks</td>
+                    <td>{c.separate.toLocaleString()}</td>
+                    <td>{c.batched.toLocaleString()}</td>
+                    <td className={cheaper ? 'better' : 'worse'}>
+                      {cheaper ? '−' : '+'}
+                      {Math.abs(delta).toFixed(1)}%
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        <p className="prose" style={{ marginTop: '1.5rem' }}>
+          The CLI warns whenever a batch spans more than a hundred blocks, so nobody discovers this by
+          spending gas. What batching buys unconditionally is atomicity: every round lands, or none
+          does, and each one still passes every check a single proof passes.
+        </p>
       </section>
 
       {/* ── Mechanism ───────────────────────────────────────────────────────────────────────── */}

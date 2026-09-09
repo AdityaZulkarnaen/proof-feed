@@ -78,12 +78,12 @@ the strike. Existence is exactly what a transaction proof establishes.
 | FR-22 | Multiple feeds registered: USDC/USD, USDT/USD, ETH/USD. |
 | FR-23 | Static web page (`web/`) reading registry + PegGuard state live from CC3 RPC; shows which source (live/cached) is displayed. |
 
-### P2 — stretch
-| ID | Requirement |
-|---|---|
-| FR-30 | Proportional payout option (`payout = notional × (strike − answer)/strike`, capped). |
-| FR-31 | Permissionless feed registration gated by proving the proxy's `AggregatorUpdated`-style upgrade event (research). |
-| FR-32 | Batch `recordRound` for several rounds sharing one continuity proof (SDK `getBatchProof`). |
+### P2 — stretch (status as of 2026-09-09)
+| ID | Requirement | Status |
+|---|---|---|
+| FR-30 | Proportional payout option (`payout = notional × (strike − answer)/strike`, capped). | **Shipped.** `PayoutMode.PROPORTIONAL` chosen at `buyCover`, priced at its own lower rate (D-13). Demonstrated on chain against the same round as a full-payout policy. |
+| FR-31 | Permissionless feed registration gated by proving the proxy's `AggregatorUpdated`-style upgrade event (research). | **Researched, not shipped (D-14).** The gating event has not occurred on any major mainnet feed inside the attestable window, so the feature would be unexercisable dead code. |
+| FR-32 | Batch `recordRound` for several rounds sharing one continuity proof (SDK `getBatchProof`). | **Shipped.** `recordRoundBatch` + `pf prove-batch`, using the precompile's batch `verifyAndEmit` overload. Gas measured both ways: a win for clustered rounds, a loss for scattered ones (D-15). |
 
 ### Out of scope (say so in README)
 - Proving `latestRoundData()`/state; proving the *absence* of rounds.

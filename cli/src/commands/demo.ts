@@ -10,7 +10,7 @@
  * Both branches run by default, because they demonstrate different halves of the thesis and the
  * README explains why the claim cannot use the 2023 round (cover always starts in the future).
  */
-import { Contract } from 'ethers';
+import { Contract, formatEther } from 'ethers';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { dryRun, fetchProof, makeBlockProver, makeProofBuilder } from '../lib/attestcoin.js';
@@ -111,16 +111,27 @@ export async function demo(argv: readonly string[]): Promise<number> {
         const p = await (guard as Contract).getPolicy!(id);
         const meta = await (registry as Contract).getFeed!(p.feedId);
         const status = ['NONE', 'ACTIVE', 'CLAIMED', 'EXPIRED'][Number(p.status)];
+        // FR-30: the mode is what decides how much a breach pays, so it belongs on screen next to
+        // the payout — two policies on the same round otherwise look like a contradiction.
+        const mode = Number(p.mode) === 1 ? 'PROPORTIONAL' : 'FULL';
+        const paid =
+          Number(p.status) === 2
+            ? ` paid ${formatEther(p.payout as bigint)} CTC on round ${p.claimRoundId}`
+            : '';
         log.info(
           `policy ${id}: "${meta.description}" strike ${formatAnswer(p.strike as bigint, Number(meta.decimals))} ` +
-            `notional ${(Number(p.notional) / 1e18).toFixed(2)} CTC ` +
+            `notional ${(Number(p.notional) / 1e18).toFixed(2)} CTC ${mode} ` +
             `window ${new Date(Number(p.start) * 1000).toISOString()}..${new Date(Number(p.expiry) * 1000).toISOString()} ` +
-            `[${status}]${Number(p.status) === 2 ? ` paid on round ${p.claimRoundId}` : ''}`,
+            `[${status}]${paid}`,
         );
       }
       log.info('');
       log.info('to settle an ACTIVE policy: npm run pf -- claim --policy <id>');
       log.info('the claim is a proof, not a request: nobody approves it, the round does');
+      log.info(
+        'FULL pays the whole notional on any breach; PROPORTIONAL pays its depth, ' +
+          'notional x (strike - answer) / strike — and costs less because it pays less (FR-30)',
+      );
     }
     await pause(auto);
   }

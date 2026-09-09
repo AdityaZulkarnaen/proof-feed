@@ -209,6 +209,58 @@ p {
   align-items: baseline;
 }
 
+/* ── Ledger: a measurement table, ruled like the rows above and never boxed ───────────────── */
+
+.ledgerScroll {
+  overflow-x: auto;
+  border-top: var(--rule);
+}
+
+.ledger {
+  width: 100%;
+  min-width: 34rem;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.ledger th {
+  padding: 0.75rem 1.25rem 0.75rem 0;
+  border-bottom: var(--rule);
+  text-align: right;
+  font: inherit;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--scratch-faint);
+  font-weight: 400;
+}
+
+.ledger th:first-child,
+.ledger td:first-child {
+  text-align: left;
+}
+
+.ledger td {
+  padding: 0.8125rem 1.25rem 0.8125rem 0;
+  border-bottom: var(--rule);
+  text-align: right;
+  color: var(--scratch-dim);
+}
+
+.ledger td:last-child,
+.ledger th:last-child {
+  padding-right: 0;
+}
+
+/* The measurement that argues against the feature is not styled away. */
+.ledger .worse {
+  color: var(--scratch-faint);
+}
+
+.ledger .better {
+  color: var(--amber);
+}
+
 /* ── Layout ───────────────────────────────────────────────────────────────────────────────── */
 
 .shell {

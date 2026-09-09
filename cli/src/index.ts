@@ -27,6 +27,11 @@ ${colors.bold}pf${colors.reset} — ProofFeed / PegGuard CLI
   ${colors.bold}pf prove --feed <F> [--tx <hash> | --latest] [--lookback 20000]${colors.reset}
       Prove one mainnet Chainlink round into the registry (FR-13). Idempotent.
 
+  ${colors.bold}pf prove-batch --feed <F> [--count 3 | --tx <hash> ...] [--compare] [--dry-run]${colors.reset}
+      Prove several rounds against ONE shared continuity proof, in one transaction (FR-32).
+      --compare        also measure what the same rounds would cost proven separately.
+      --dry-run        estimate and report only; submit nothing.
+
   ${colors.bold}pf watch --feed <F> [--interval 30] [--backfill 300] [--from <block>] [--once]${colors.reset}
       Permissionless keeper loop: prove every new round (FR-14). Idempotent, resumable.
       A cold start only looks back --backfill blocks (~1 h) so it does not replay history.
@@ -63,6 +68,10 @@ async function main(): Promise<number> {
     case 'prove': {
       const { prove } = await import('./commands/prove.js');
       return await prove(rest);
+    }
+    case 'prove-batch': {
+      const { proveBatch } = await import('./commands/prove-batch.js');
+      return await proveBatch(rest);
     }
     case 'watch': {
       const { watch } = await import('./commands/watch.js');

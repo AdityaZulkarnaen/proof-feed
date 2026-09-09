@@ -25,7 +25,7 @@ contract ProverBountyTest is BaseTest {
         super.setUp();
         guard = new PegGuard(IProvenFeedRegistry(address(registry)), owner);
         vm.prank(owner);
-        guard.configurePool(USDC_FEED_ID, PREMIUM_BPS_30D, 0, MAX_NOTIONAL, true, BOUNTY_BPS);
+        guard.configurePool(USDC_FEED_ID, PREMIUM_BPS_30D, 0, MAX_NOTIONAL, true, BOUNTY_BPS, 30);
 
         vm.deal(lp, 1000 ether);
         vm.deal(holder, 1000 ether);
@@ -220,12 +220,12 @@ contract ProverBountyTest is BaseTest {
     function test_Bounty_ShareIsCappedSoThePoolIsNeverUnderwritingForNothing() public {
         vm.prank(owner);
         vm.expectRevert(abi.encodeWithSelector(PegGuard.InvalidBountyShare.selector, uint16(5_001)));
-        guard.configurePool(USDC_FEED_ID, PREMIUM_BPS_30D, 0, MAX_NOTIONAL, true, 5_001);
+        guard.configurePool(USDC_FEED_ID, PREMIUM_BPS_30D, 0, MAX_NOTIONAL, true, 5_001, 30);
     }
 
     function test_Bounty_ZeroShareBehavesExactlyAsBefore() public {
         vm.prank(owner);
-        guard.configurePool(USDC_FEED_ID, PREMIUM_BPS_30D, 0, MAX_NOTIONAL, true, 0);
+        guard.configurePool(USDC_FEED_ID, PREMIUM_BPS_30D, 0, MAX_NOTIONAL, true, 0, 30);
         _seed();
         (uint256 policyId, uint256 premium, uint256 bounty) = _buy();
 

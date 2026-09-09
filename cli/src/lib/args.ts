@@ -27,3 +27,23 @@ export function numberFlag(argv: readonly string[], name: string, fallback: numb
   if (!Number.isFinite(n)) throw new Error(`${name} expects a number, got "${raw}"`);
   return n;
 }
+
+/** Every value of a repeatable `--name <value>` / `--name=<value>` flag, in order. */
+export function flags(argv: readonly string[], name: string): string[] {
+  const out: string[] = [];
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i]!;
+    if (a.startsWith(`${name}=`)) {
+      out.push(a.slice(name.length + 1));
+      continue;
+    }
+    if (a === name) {
+      const next = argv[i + 1];
+      if (next !== undefined && !next.startsWith('--')) {
+        out.push(next);
+        i++;
+      }
+    }
+  }
+  return out;
+}

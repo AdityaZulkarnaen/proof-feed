@@ -12,9 +12,9 @@ Live on **Creditcoin CC3 testnet** · BUIDL CTC 2026 Fall · track: **DeFi**
 
 | | |
 |---|---|
-| `ProvenFeedRegistry` | [`0x89ab0ad8768CD06d0f3bc134ad2407705a49d309`](https://creditcoin-testnet.blockscout.com/address/0x89ab0ad8768CD06d0f3bc134ad2407705a49d309) |
-| `ProvenFeedAdapter` (USDC/USD) | [`0x678C84Fe193a569FbDAF58e5f0d8f290a4072735`](https://creditcoin-testnet.blockscout.com/address/0x678C84Fe193a569FbDAF58e5f0d8f290a4072735) |
-| `PegGuard` | [`0x367693043C3E8396252728cAEBfBAB3fF43c78d5`](https://creditcoin-testnet.blockscout.com/address/0x367693043C3E8396252728cAEBfBAB3fF43c78d5) |
+| `ProvenFeedRegistry` | [`0x086Ae43C078122A419887a2D73a6d8e7Be3679Ed`](https://creditcoin-testnet.blockscout.com/address/0x086Ae43C078122A419887a2D73a6d8e7Be3679Ed) |
+| `ProvenFeedAdapter` (USDC/USD) | [`0x639f24D0E4298031Da29E523a81910166596027D`](https://creditcoin-testnet.blockscout.com/address/0x639f24D0E4298031Da29E523a81910166596027D) |
+| `PegGuard` | [`0x7Ae5B58c75Fe194F72d1d8a8527688339D013a6e`](https://creditcoin-testnet.blockscout.com/address/0x7Ae5B58c75Fe194F72d1d8a8527688339D013a6e) |
 
 All source-verified on Blockscout. Every hash below is real; full log in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 
@@ -76,8 +76,8 @@ now stored on Creditcoin, proven from the original mainnet transaction:
 | Chainlink `updatedAt` | 2023-03-11T07:51:23Z |
 | Mainnet block / tx | `16,803,472` / [`0x24500a30…acd8`](https://etherscan.io/tx/0x24500a30910fb1a99de3c13eacb4e4dd05334e4078615dcf276c58dcfbddacd8) |
 | Emitter | `0x789190466E21a8b78b8027866CBBDc151542A26C` (phase-2 aggregator, discovered via `phaseAggregators(2)`) |
-| **Creditcoin `recordRound`** | [`0x51391915…2d06`](https://creditcoin-testnet.blockscout.com/tx/0x51391915f812b640d8eafafdfd44205777d37d12d33c7319c9dc467b0f912d06) |
-| Gas | 628,299 (529 continuity roots) |
+| **Creditcoin `recordRound`** | [`0x5c5f1c6d…3a7c`](https://creditcoin-testnet.blockscout.com/tx/0x5c5f1c6d7351ccd1c2418c75bff1ae345734b026f12d7b7ea483b211aadb3a7c) |
+| Gas | 650,223 (529 continuity roots) |
 
 That receipt carries `TransactionVerified(chainKey=3, height=16803472, txIndex=61)` from the
 precompile at `0x…0FD2`, and `RoundProven(answer=88000000, updatedAt=1678521083)` from the registry.
@@ -98,18 +98,37 @@ monotonicity invariant, observed on chain rather than only in tests.
 
 | | |
 |---|---|
-| Policy | pay 50 CTC if ETH/USD prints below $2766.65 within 7 days |
-| Breaching round | **$2491.46085391** at 2026-09-09T05:46:47Z |
-| Mainnet block / tx | `25,937,816` / [`0xae0e83e1…c8a2`](https://etherscan.io/tx/0xae0e83e13386d4f1fbf3a7fa36349cb6d4d9533bceb0d193f6569c6f897ac8a2) |
-| **Creditcoin `proveAndClaim`** | [`0x9427273f…4e52`](https://creditcoin-testnet.blockscout.com/tx/0x9427273f95483be97491eee0010960710ab938865756de85855cb1cd7f4b4e52) |
-| Gas | 394,142 |
-| Payout | holder +49.999803 CTC (50 CTC notional, net of gas) |
-| Prover bounty | 0.011666666666666666 CTC accrued, [withdrawn separately](https://creditcoin-testnet.blockscout.com/tx/0xa3ca0e60de8f7b54c22fcbbd079a787816b705ff5d2ae80ecb5412dcab1d353d) |
+| Policy | pay 50 CTC if ETH/USD prints below $2754.36 within 7 days |
+| Breaching round | **$2511.25370000** at 2026-09-09T07:23:59Z |
+| Mainnet block / tx | `25,938,300` / [`0xcc75aa35…035c`](https://etherscan.io/tx/0xcc75aa354d3ab92f1d4ac02fb63e14e3cb270c2726a878899c8e2ddab627035c) |
+| **Creditcoin `proveAndClaim`** | [`0xa6c5ffa8…36b6`](https://creditcoin-testnet.blockscout.com/tx/0xa6c5ffa8f670e590d2b1b36f559a48e03cb4eadb97c333e56c72703e4dbd36b6) |
+| Gas | 449,666 |
+| Payout | holder +49.999775 CTC (50 CTC notional, net of gas) |
+| Prover bounty | 0.011666666666666666 CTC accrued, [withdrawn separately](https://creditcoin-testnet.blockscout.com/tx/0xf73096088d9b7adcd027c20601fa7052a9e4f4596c183cd62116c67c09ab171e) |
 
 One transaction carries the whole chain of custody, five events in order:
 `TransactionVerified` from the precompile → `RoundProven` → `LatestRoundUpdated` → `BountyAccrued`
-→ `ClaimPaid`. Afterwards the pool holds exactly 200 deposited + 0.0466666 kept premium − 50 paid =
-**150.046666666666666667 CTC**, `locked` back to 0, escrow empty, and the contract's CTC balance
+→ `ClaimPaid`. Nobody approved that payout; the round did.
+
+### Two payout modes, same round, side by side (FR-30)
+
+A second policy was written at the **identical strike and notional**, differing only in how a breach
+settles, and both were claimed against the **same** proven round:
+
+| Policy | Mode | Premium | Payout | Returned to the pool |
+|---|---|---|---|---|
+| 0 | `FULL` | 0.058333333333333333 CTC | **50.000000000000000000 CTC** | 0 |
+| 1 | [`PROPORTIONAL`](https://creditcoin-testnet.blockscout.com/tx/0x013188937ea2bede2fe7e41657bfe0a029b4cbd464dd2b11be049a0f9d701d52) | 0.035 CTC | **4.413064841323284691 CTC** | 45.586935158676715309 CTC |
+
+`FULL` is a trigger: any breach, however shallow, pays the whole notional. `PROPORTIONAL` pays
+`notional × (strike − answer) / strike` — a 8.8% breach pays 8.8% — which is what somebody hedging
+an actual position wants. Because it pays strictly less, it is written at its own lower rate (30 bps
+against 50 bps per 30 days); charging the same for both would leave nobody a reason to buy it.
+
+The pool reserves the **full** notional against either mode, because that is its worst case, and the
+proportional policy handed 45.58 CTC back to free liquidity the instant it settled. Afterwards the
+pool holds exactly `200 + 0.046666666666666667 + 0.028 − 50 − 4.413064841323284691 =`
+**145.661601825343381976 CTC**, `locked` back to 0, escrow empty, and the contract's CTC balance
 equals its own accounting to the wei.
 
 ### The prover bounty (FR-20)
@@ -133,6 +152,41 @@ Two decisions in there are load-bearing:
 Escrow is never pool liquidity: an LP cannot withdraw it, and a claim cannot spend it as notional.
 An unearned bounty returns to the pool when the policy expires.
 
+### Several rounds, one continuity proof (FR-32)
+
+`recordRoundBatch` hands the Attestcoin prover's batch response straight to the precompile's batch
+`verifyAndEmit` overload: one shared continuity proof, one Merkle proof per transaction, one
+Creditcoin transaction. Three ETH/USD rounds from a single volatility burst, proven together:
+
+| | |
+|---|---|
+| **Creditcoin `recordRoundBatch`** | [`0x882c6ae1…3da2`](https://creditcoin-testnet.blockscout.com/tx/0x882c6ae14cb691ce9d1da231ea4d1733b09e5b986d833f17b529c4217ea33da2) |
+| Rounds | 3, across mainnet blocks 25,903,977–25,903,981 (two of them in the *same* block) |
+| Gas | **769,283** — against **939,766** proving them one at a time |
+| Events | 3 × `TransactionVerified` from `0x…0FD2`, 3 × `RoundProven`, from **one** precompile call |
+
+**Batching is not automatically cheaper, and the tool says so rather than letting you find out by
+spending gas.** A shared continuity proof has to reach from the first block in the set to the last,
+while each single proof only reaches its own nearest attestation checkpoint — about 100 blocks away.
+So the win depends on how *clustered* the rounds are, not on how many there are:
+
+| Rounds | Span | Separately | Batched | Δ |
+|---|---|---|---|---|
+| 3 | **4 blocks** | 939,766 | **769,283** | **−18.1%** |
+| 3 | 390 blocks | 1,084,232 | 1,052,808 | −2.9% |
+| 2 | 247 blocks | 691,338 | 792,207 | **+14.6%** |
+| 4 | 845 blocks | 1,340,319 | 1,727,572 | **+28.9%** |
+
+Measure it yourself against the live chain, without spending anything:
+
+```bash
+npm run pf -- prove-batch --feed ETH/USD --count 3 --compare --dry-run
+```
+
+`pf prove-batch` warns whenever the span exceeds 100 blocks. What batching buys unconditionally is
+atomicity — N rounds land in one transaction or none do — and every element still passes every check
+`recordRound` applies: its own query id, its own emitter lookup, its own round-exists guard.
+
 ### Reading it as a Chainlink consumer
 
 ```console
@@ -151,7 +205,7 @@ this unmodified — there is a test that does exactly that with its own locally-
 
 ```bash
 git clone https://github.com/AdityaZulkarnaen/proof-feed.git && cd proof-feed
-npm ci && (cd contracts && forge test)          # 90 tests, zero network access
+npm ci && (cd contracts && forge test)          # 130 tests, zero network access
 npm run pf -- demo --yes                        # read the live deployment back off CC3
 ```
 
@@ -176,9 +230,9 @@ Run on a clean `git clone` into an empty directory, with no `.env`:
 | Step | Result |
 |---|---|
 | `npm ci` | 50 packages, clean |
-| `forge test` | **90 passed, 0 failed** — Foundry auto-fetches the pinned `forge-std` v1.16.2 submodule on first run (needs network once; or clone with `--recurse-submodules`) |
+| `forge test` | **130 passed, 0 failed** — Foundry auto-fetches the pinned `forge-std` v1.16.2 submodule on first run (needs network once; or clone with `--recurse-submodules`) |
 | `npm run typecheck` | clean |
-| `npm run test:cli` | **23 passed** |
+| `npm run test:cli` | **25 passed** |
 | `npm run pf -- spike` | G1, G2, G3a, G3b all **PASS** with no `.env` |
 | `npm run pf -- demo --yes` | reads the live registry and the settled policy |
 
@@ -193,6 +247,7 @@ it.
 | Surface | Where | What it does here |
 |---|---|---|
 | `INativeQueryVerifier.verifyAndEmit` | on chain, `0x…0FD2` | the only thing that makes transaction bytes trustworthy |
+| `INativeQueryVerifier.verifyAndEmit` (batch overload) | on chain, `0x…0FD2`, on `pf prove-batch` | N transactions against one shared continuity proof (FR-32) |
 | `INativeQueryVerifier.calculateTxIndex` | on chain, via `ASCBase._computeQueryId` | derives the query id used for replay protection |
 | `ASCBase._verifyProof` / `_computeQueryId` / `processedQueries` | on chain | inherited base-layer plumbing |
 | `EvmV1Decoder.getTransactionType` / `isValidTransactionType` | on chain | rejects transaction types the decoder cannot handle |
@@ -213,6 +268,13 @@ it.
 | `chainInfo.getContinuityBounds` | deep history is covered — the basis for trying a 2023 round at all |
 | `chainInfo.getAttestationGenesisHeight` | probed, and found **ambiguous** (returns 0); replaced as the branch decider |
 | `PrecompileBlockProver.computeTransactionIndex` | cross-checks the prover's own `txIndex` off chain |
+
+**On `npm run pf -- prove-batch` only** (FR-32):
+
+| Surface | What it does here |
+|---|---|
+| `ProofBuilder.getBatchProof` | `POST /api/v1/proof-batch-by-tx` — one continuity proof spanning every block in the set |
+| `PrecompileBlockProver.verifyBatch` | pre-flight `eth_call` against the batch overload; we never submit when it is false |
 
 **On `pf claim`:** everything in the first table, plus `PegGuard.proveAndClaim`, which calls
 `recordRound` and settles in one transaction.
@@ -245,6 +307,11 @@ Every proven round satisfies all of these, in order: query id unused → `verify
 chainKey** → log shape is exactly `AnswerUpdated` (3 topics, 32 bytes of data) → round not already
 stored.
 
+`recordRoundBatch` (FR-32) applies that same list to **every** element, and is all-or-nothing: the
+precompile returns one verdict for the whole set, so there is no partial success in which an
+unverified round could survive alongside verified ones. A batch cannot contain the same transaction
+twice, and cannot re-prove one the single-proof path already consumed — both directions are tested.
+
 ## Limitations — disclosed, not discovered
 
 - **This proves transaction history, not state.** It can prove that round *R* happened and printed
@@ -264,16 +331,33 @@ stored.
 - **One-directional.** Creditcoin reads Ethereum. Writability is not available on testnet, and
   nothing here depends on sending a message back.
 - **Feed registration is owner-managed** (`Ownable2Step`) — a centralisation point of
-  *configuration*, not of *data*. Permissionless registration by proving the proxy's own upgrade
-  event is future work.
-- Testnet CTC, unaudited, binary payout, premiums are non-refundable.
+  *configuration*, not of *data*. Making it permissionless by proving the proxy's own
+  `AggregatorConfirmed` event was specified as P2 (FR-31), researched, and **deliberately not
+  shipped**: scanning Ethereum mainnet from block 16,500,000 — the start of the attestable window —
+  to 25,938,051 found **zero** such events across thirteen major Chainlink feeds. Established feeds
+  are upgraded by changing OCR configuration inside the same aggregator, not by swapping the
+  aggregator behind the proxy. The feature would have been an owner-bypass path that no proof could
+  ever exercise, so it stays unbuilt until the event actually occurs. Evidence in
+  `docs/DEPLOYMENT.md`.
+- **Batching is not always cheaper.** `recordRoundBatch` wins for clustered rounds and loses for
+  scattered ones, because the shared continuity proof spans the whole batch. Measured both ways
+  above; the CLI warns before you spend gas on the losing case.
+- Testnet CTC, unaudited, premiums are non-refundable.
 
 ## Tests
 
 ```
-contracts:  90 tests, 5 suites — forge test          (no network access)
-cli:        23 tests                                  — npm run test:cli
+contracts: 130 tests, 8 suites — forge test          (no network access)
+cli:        25 tests                                  — npm run test:cli
 coverage:   98.7% of lines on src/ (233/236), excluding the Day-1 spike contract
+```
+
+Coverage below was measured on the P1 tree (`forge coverage --ir-minimum`). The P2 additions —
+`recordRoundBatch` and the proportional-payout path — ship with 29 dedicated tests plus a new
+invariant, but the percentages have not been re-run since; re-measure with:
+
+```bash
+cd contracts && forge coverage --ir-minimum --no-match-coverage "(test|script)" --report summary
 ```
 
 | Contract | Lines | Branches |

@@ -19,8 +19,8 @@ const REGISTRY_ABI = [
 ] as const;
 
 const PEGGUARD_ABI = [
-  'function getPolicy(uint256 policyId) view returns (tuple(bytes32 feedId, address holder, int256 strike, uint128 notional, uint128 premiumPaid, uint64 start, uint64 expiry, uint8 status, uint80 claimRoundId, uint128 proverBounty))',
-  'function getPool(bytes32 feedId) view returns (tuple(uint256 balance, uint256 locked, uint256 totalShares, uint16 premiumBpsPer30d, uint32 waitingPeriod, uint128 maxNotional, bool active, uint16 proverBountyBps))',
+  'function getPolicy(uint256 policyId) view returns (tuple(bytes32 feedId, address holder, int256 strike, uint128 notional, uint128 premiumPaid, uint64 start, uint64 expiry, uint8 status, uint80 claimRoundId, uint128 proverBounty, uint8 mode, uint128 payout))',
+  'function getPool(bytes32 feedId) view returns (tuple(uint256 balance, uint256 locked, uint256 totalShares, uint16 premiumBpsPer30d, uint32 waitingPeriod, uint128 maxNotional, bool active, uint16 proverBountyBps, uint16 proportionalBpsPer30d))',
   'function bountyEscrow() view returns (uint256)',
 ] as const;
 
@@ -35,6 +35,14 @@ export interface FeedReading {
   provenAt: number;
 }
 
+export interface ProportionalReading {
+  status: 'NONE' | 'ACTIVE' | 'CLAIMED' | 'EXPIRED';
+  mode: 'FULL' | 'PROPORTIONAL';
+  payoutWei: string;
+  notionalWei: string;
+  claimRoundId: string;
+}
+
 export interface PolicyReading {
   status: 'NONE' | 'ACTIVE' | 'CLAIMED' | 'EXPIRED';
   claimRoundId: string;
@@ -44,6 +52,12 @@ export interface PolicyReading {
   /** FR-20: share of each premium escrowed for whoever proves the breaching round. */
   proverBountyBps: number;
   bountyEscrowWei: string;
+  /** FR-30: how policy 0 settled, and the sibling policy that settled the other way. */
+  mode: 'FULL' | 'PROPORTIONAL';
+  payoutWei: string;
+  proportional: ProportionalReading;
+  proportionalBpsPer30d: number;
+  premiumBpsPer30d: number;
 }
 
 export interface ChainState {
@@ -56,6 +70,7 @@ export interface ChainState {
 }
 
 const STATUS = ['NONE', 'ACTIVE', 'CLAIMED', 'EXPIRED'] as const;
+const MODE = ['FULL', 'PROPORTIONAL'] as const;
 
 function provider(): JsonRpcProvider {
   return new JsonRpcProvider(CHAIN.rpc, CHAIN.id, { staticNetwork: true });
@@ -91,7 +106,7 @@ export async function readChainState(): Promise<ChainState> {
 
     const wanted = [FEEDS.usdc, FEEDS.eth] as const;
 
-    const [readings, policy, pool, escrow] = await withTimeout(
+    const [readings, policy, prop, pool, escrow] = await withTimeout(
       Promise.all([
         Promise.all(
           wanted.map(async (feed) => {
@@ -107,6 +122,7 @@ export async function readChainState(): Promise<ChainState> {
           }),
         ),
         pegGuard.getPolicy!(0),
+        pegGuard.getPolicy!(1),
         pegGuard.getPool!(FEEDS.eth.id),
         pegGuard.bountyEscrow!(),
       ]),
@@ -126,6 +142,17 @@ export async function readChainState(): Promise<ChainState> {
         poolLockedWei: (pool.locked as bigint).toString(),
         proverBountyBps: Number(pool.proverBountyBps),
         bountyEscrowWei: (escrow as bigint).toString(),
+        mode: MODE[Number(policy.mode)] ?? 'FULL',
+        payoutWei: (policy.payout as bigint).toString(),
+        proportional: {
+          status: STATUS[Number(prop.status)] ?? 'NONE',
+          mode: MODE[Number(prop.mode)] ?? 'PROPORTIONAL',
+          payoutWei: (prop.payout as bigint).toString(),
+          notionalWei: (prop.notional as bigint).toString(),
+          claimRoundId: (prop.claimRoundId as bigint).toString(),
+        },
+        proportionalBpsPer30d: Number(pool.proportionalBpsPer30d),
+        premiumBpsPer30d: Number(pool.premiumBpsPer30d),
       },
     };
   } catch (err) {

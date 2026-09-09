@@ -21,9 +21,9 @@ export const SOURCE_CHAIN = {
 } as const;
 
 export const CONTRACTS = {
-  registry: '0x89ab0ad8768CD06d0f3bc134ad2407705a49d309',
-  adapter: '0x678C84Fe193a569FbDAF58e5f0d8f290a4072735',
-  pegGuard: '0x367693043C3E8396252728cAEBfBAB3fF43c78d5',
+  registry: '0x086Ae43C078122A419887a2D73a6d8e7Be3679Ed',
+  adapter: '0x639f24D0E4298031Da29E523a81910166596027D',
+  pegGuard: '0x7Ae5B58c75Fe194F72d1d8a8527688339D013a6e',
   /** The Block Prover / Native Query Verifier precompile. */
   verifier: '0x0000000000000000000000000000000000000FD2',
 } as const;
@@ -60,8 +60,8 @@ export const DEPEG = {
   aggregatorRoundId: 983n,
   /** (phaseId 2 << 64) | 983 */
   roundId: 36_893_488_147_419_104_215n,
-  provenTx: '0x51391915f812b640d8eafafdfd44205777d37d12d33c7319c9dc467b0f912d06',
-  gas: 628_299,
+  provenTx: '0x5c5f1c6d7351ccd1c2418c75bff1ae345734b026f12d7b7ea483b211aadb3a7c',
+  gas: 650_223,
   continuityRoots: 529,
   txIndex: 61,
 } as const;
@@ -80,18 +80,18 @@ export const CURRENT_ROUND = {
 export const CLAIM = {
   policyId: 0,
   feed: 'ETH / USD',
-  strike: 276_665_306_632n,
+  strike: 275_435_680_339n,
   notionalCtc: 50,
-  breachAnswer: 249_146_085_391n,
-  breachUpdatedAt: 1_788_932_807,
-  breachSourceBlock: 25_937_816,
-  breachSourceTx: '0xae0e83e13386d4f1fbf3a7fa36349cb6d4d9533bceb0d193f6569c6f897ac8a2',
-  roundId: 129_127_208_515_966_894_751n,
-  tx: '0x9427273f95483be97491eee0010960710ab938865756de85855cb1cd7f4b4e52',
-  gas: 394_142,
+  breachAnswer: 251_125_370_000n,
+  breachUpdatedAt: 1_788_938_639,
+  breachSourceBlock: 25_938_300,
+  breachSourceTx: '0xcc75aa354d3ab92f1d4ac02fb63e14e3cb270c2726a878899c8e2ddab627035c',
+  roundId: 129_127_208_515_966_894_753n,
+  tx: '0xa6c5ffa8f670e590d2b1b36f559a48e03cb4eadb97c333e56c72703e4dbd36b6',
+  gas: 449_666,
   /** FR-20: escrowed out of the premium, accrued on settlement, withdrawn separately. */
   bountyCtc: '0.011666666666666666',
-  bountyWithdrawTx: '0xa3ca0e60de8f7b54c22fcbbd079a787816b705ff5d2ae80ecb5412dcab1d353d',
+  bountyWithdrawTx: '0xf73096088d9b7adcd027c20601fa7052a9e4f4596c183cd62116c67c09ab171e',
   /** The five events that transaction emitted, in order. */
   events: [
     { name: 'TransactionVerified', from: 'the 0xFD2 precompile' },
@@ -99,6 +99,47 @@ export const CLAIM = {
     { name: 'LatestRoundUpdated', from: 'ProvenFeedRegistry' },
     { name: 'BountyAccrued', from: 'PegGuard' },
     { name: 'ClaimPaid', from: 'PegGuard' },
+  ],
+} as const;
+
+/**
+ * FR-30. A second policy at the identical strike and notional, settled against the identical round,
+ * differing only in how a breach pays. This is the comparison the product turns on.
+ */
+export const PROPORTIONAL_CLAIM = {
+  policyId: 1,
+  premiumCtc: '0.035',
+  payoutCtc: '4.413064841323284691',
+  releasedCtc: '45.586935158676715309',
+  tx: '0x013188937ea2bede2fe7e41657bfe0a029b4cbd464dd2b11be049a0f9d701d52',
+  gas: 339_346,
+  /** Basis points per 30 days: full cover costs 50, proportional 30, because it pays less. */
+  fullBps: 50,
+  proportionalBps: 30,
+  fullPremiumCtc: '0.058333333333333333',
+  fullPayoutCtc: '50',
+} as const;
+
+/**
+ * FR-32. Several rounds against one shared continuity proof. The saving is real but conditional:
+ * a shared proof must span from the first block to the last, so clustered rounds win and scattered
+ * ones lose. Every figure measured on chain or by `pf prove-batch --compare --dry-run`.
+ */
+export const BATCH = {
+  tx: '0x882c6ae14cb691ce9d1da231ea4d1733b09e5b986d833f17b529c4217ea33da2',
+  rounds: 3,
+  spanBlocks: 4,
+  fromBlock: 25_903_977,
+  toBlock: 25_903_981,
+  sharedRoots: 24,
+  gas: 769_283,
+  separateGas: 939_766,
+  /** The full picture, including the cases where batching costs more. */
+  comparisons: [
+    { rounds: 3, span: 4, separate: 939_766, batched: 769_283 },
+    { rounds: 3, span: 390, separate: 1_084_232, batched: 1_052_808 },
+    { rounds: 2, span: 247, separate: 691_338, batched: 792_207 },
+    { rounds: 4, span: 845, separate: 1_340_319, batched: 1_727_572 },
   ],
 } as const;
 

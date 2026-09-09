@@ -34,7 +34,7 @@ contract PegGuardInvariantTest is Test {
         registry.registerFeed(FEED_ID, CHAIN_KEY, AGGREGATOR, PHASE, 8, "USDC / USD");
 
         guard = new PegGuard(IProvenFeedRegistry(address(registry)), owner);
-        guard.configurePool(FEED_ID, 50, 0, 100 ether, true, 2_000);
+        guard.configurePool(FEED_ID, 50, 0, 100 ether, true, 2_000, 30);
 
         handler = new PegGuardHandler(registry, guard, FEED_ID);
         vm.deal(address(handler), 10_000 ether);
@@ -66,6 +66,24 @@ contract PegGuardInvariantTest is Test {
     function invariant_BountyEscrowIsSeparateFromPool() public view {
         PegGuard.Pool memory p = guard.getPool(FEED_ID);
         assertGe(address(guard).balance - guard.bountyEscrow(), p.balance, "escrow not double-counted");
+    }
+
+    /// @notice FR-30: no settled policy ever paid more than the notional the pool reserved for
+    ///         it, and a proportional policy's payout is exactly the formula applied to the round
+    ///         that settled it. This is what lets `locked` be released in full on a partial payout.
+    function invariant_PayoutNeverExceedsReservedNotional() public view {
+        uint256[] memory ids = handler.policyIds();
+        for (uint256 i; i < ids.length; ++i) {
+            PegGuard.Policy memory p = guard.getPolicy(ids[i]);
+            if (p.status != PegGuard.Status.CLAIMED) continue;
+            assertLe(p.payout, p.notional, "payout <= reserved notional");
+            IProvenFeedRegistry.Round memory r = registry.getRound(p.feedId, p.claimRoundId);
+            assertEq(
+                p.payout,
+                guard.payoutFor(p.mode, p.notional, p.strike, r.answer),
+                "the payout is the formula, applied to the proven answer"
+            );
+        }
     }
 
     /// @notice Shares exist only while there is a balance to redeem them against.
@@ -109,6 +127,32 @@ contract PegGuardInvariantTest is Test {
         _assertInvariants("after claim");
         assertEq(holder.balance, balanceBefore + 50 ether, "the claim really paid");
         assertEq(guard.getPool(FEED_ID).locked, 0, "capacity released");
+
+        // FR-30: a proportional policy over the same breach. It must pay strictly less, release
+        // the whole reserve, and leave the pool solvent. Asserted deterministically here because
+        // the fuzzer's actions all swallow reverts — a run that never reached a partial payout
+        // would leave `invariant_PayoutNeverExceedsReservedNotional` passing on nothing.
+        uint256 propPremium =
+            guard.quoteFor(FEED_ID, 50 ether, 7, PegGuard.PayoutMode.PROPORTIONAL);
+        assertLt(propPremium, premium, "proportional cover is cheaper");
+        vm.prank(holder);
+        uint256 propId = guard.buyCover{value: propPremium}(
+            FEED_ID, 97_000_000, 50 ether, 7, PegGuard.PayoutMode.PROPORTIONAL
+        );
+        _assertInvariants("after proportional buyCover");
+        assertEq(guard.getPool(FEED_ID).locked, 50 ether, "the FULL notional is reserved");
+
+        uint80 propRound = _proveRound(88_000_000);
+        uint256 poolBefore = guard.getPool(FEED_ID).balance;
+        uint256 holderBefore = holder.balance;
+        guard.claim(propId, propRound);
+        _assertInvariants("after proportional claim");
+
+        uint256 paid = holder.balance - holderBefore;
+        assertEq(paid, guard.getPolicy(propId).payout, "the policy records what it paid");
+        assertLt(paid, 50 ether, "a 9/97 breach pays far less than the notional");
+        assertEq(guard.getPool(FEED_ID).locked, 0, "the whole reserve is released");
+        assertEq(guard.getPool(FEED_ID).balance, poolBefore - paid, "only the payout left the pool");
 
         // A second policy that runs to expiry instead of paying.
         vm.prank(holder);
@@ -164,7 +208,9 @@ contract PegGuardInvariantTest is Test {
         console.log("invariant run coverage:");
         console.log("  rounds proven   ", handler.roundsProven());
         console.log("  covers bought   ", handler.coversBought());
+        console.log("   of them prop.  ", handler.proportionalCovers());
         console.log("  claims paid     ", handler.claimsPaid());
+        console.log("   of them prop.  ", handler.proportionalClaimsPaid());
         console.log("  policies expired", handler.policiesExpired());
         console.log("  withdrawals     ", handler.withdrawals());
         console.log("  bounties drawn  ", handler.bountiesWithdrawn());
@@ -198,7 +244,9 @@ contract PegGuardHandler is Test {
     // action swallows reverts — a run in which no claim ever paid would look identical to a healthy
     // one. `afterInvariant` asserts each interesting state was actually reached.
     uint256 public coversBought;
+    uint256 public proportionalCovers;
     uint256 public claimsPaid;
+    uint256 public proportionalClaimsPaid;
     uint256 public policiesExpired;
     uint256 public withdrawals;
     uint256 public roundsProven;
@@ -233,14 +281,19 @@ contract PegGuardHandler is Test {
         } catch {}
     }
 
-    function buyCover(uint96 notional, uint8 durationDays) external {
+    /// @dev FR-30: the mode is fuzzed too, so INV-07 is exercised against partial payouts —
+    ///      the case where `locked` drops by the full notional but `balance` only by the payout.
+    function buyCover(uint96 notional, uint8 durationDays, bool proportional) external {
         uint256 n = bound(notional, 1e15, 100 ether);
         uint256 d = bound(durationDays, 1, 90);
-        uint256 premium = GUARD.quote(FEED_ID, n, d);
+        PegGuard.PayoutMode mode =
+            proportional ? PegGuard.PayoutMode.PROPORTIONAL : PegGuard.PayoutMode.FULL;
+        uint256 premium = GUARD.quoteFor(FEED_ID, n, d, mode);
         if (address(this).balance < premium) return;
-        try GUARD.buyCover{value: premium}(FEED_ID, 97_000_000, uint128(n), d) returns (uint256 id) {
+        try GUARD.buyCover{value: premium}(FEED_ID, 97_000_000, uint128(n), d, mode) returns (uint256 id) {
             policies.push(id);
             ++coversBought;
+            if (proportional) ++proportionalCovers;
         } catch {}
     }
 
@@ -270,8 +323,10 @@ contract PegGuardHandler is Test {
         if (policies.length == 0 || provenRounds.length == 0) return;
         uint256 id = policies[bound(policySeed, 0, policies.length - 1)];
         uint80 roundId = provenRounds[bound(roundSeed, 0, provenRounds.length - 1)];
+        bool proportional = GUARD.getPolicy(id).mode == PegGuard.PayoutMode.PROPORTIONAL;
         try GUARD.claim(id, roundId) {
             ++claimsPaid;
+            if (proportional) ++proportionalClaimsPaid;
         } catch (bytes memory err) {
             lastClaimError = bytes4(err);
             if (bytes4(err) == PegGuard.PolicyNotActive.selector) ++errNotActive;
@@ -294,6 +349,11 @@ contract PegGuardHandler is Test {
         try GUARD.withdrawBounty() returns (uint256) {
             ++bountiesWithdrawn;
         } catch {}
+    }
+
+    /// @notice Every policy the fuzzer has bought, so an invariant can walk them all.
+    function policyIds() external view returns (uint256[] memory) {
+        return policies;
     }
 
     function warp(uint32 seconds_) external {

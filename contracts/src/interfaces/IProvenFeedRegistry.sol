@@ -87,6 +87,13 @@ interface IProvenFeedRegistry {
     /// @notice The inherited `ASCBase.execute` entrypoint is disabled — use `recordRound` (D-03).
     error UseRecordRound();
 
+    /// @notice A batch was submitted with no transactions in it.
+    error EmptyBatch();
+    /// @notice Batch gas is bounded: at most `MAX_BATCH` transactions per shared continuity proof.
+    error BatchTooLarge(uint256 n);
+    /// @notice The batch's parallel arrays are not the same length.
+    error BatchLengthMismatch(uint256 heights, uint256 transactions, uint256 proofs);
+
     /// @notice Register an aggregator as a source for `feedId`. Configuration only — never data.
     function registerFeed(
         bytes32 feedId,
@@ -109,6 +116,30 @@ interface IProvenFeedRegistry {
         bytes calldata encodedTransaction,
         bytes32 merkleRoot,
         INativeQueryVerifier.MerkleProofEntry[] calldata siblings,
+        bytes32 lowerEndpointDigest,
+        bytes32[] calldata continuityRoots
+    ) external returns (uint80[] memory roundIds);
+
+    /// @notice Verify ONE shared continuity proof covering several transactions and store every
+    ///         Chainlink round they contain (FR-32).
+    /// @dev The Attestcoin prover's `/api/v1/proof-batch-by-tx` returns a single `ContinuityProof`
+    ///      spanning `fromHeader..toHeader` plus a Merkle proof per transaction. This entrypoint
+    ///      hands that shape straight to the precompile's batch `verifyAndEmit` overload, so the
+    ///      continuity roots — the bulk of a proof's calldata — are paid for once instead of once
+    ///      per round. All-or-nothing: if any transaction fails to verify or decode, none are stored.
+    /// @param chainKey Attestcoin source-chain key shared by every transaction in the batch.
+    /// @param blockHeights Source-chain height of each transaction. The precompile is the authority
+    ///        on whether they fall inside the shared proof; this contract does not reorder them.
+    /// @param encodedTransactions The proved transaction bytes, index-aligned with `blockHeights`.
+    /// @param merkleProofs Inclusion proof of each transaction in its own block.
+    /// @param lowerEndpointDigest Lower endpoint of the shared continuity proof.
+    /// @param continuityRoots Roots of the shared continuity proof.
+    /// @return roundIds Every proxy round id stored by this call, in batch order.
+    function recordRoundBatch(
+        uint64 chainKey,
+        uint64[] calldata blockHeights,
+        bytes[] calldata encodedTransactions,
+        INativeQueryVerifier.MerkleProof[] calldata merkleProofs,
         bytes32 lowerEndpointDigest,
         bytes32[] calldata continuityRoots
     ) external returns (uint80[] memory roundIds);

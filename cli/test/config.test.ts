@@ -41,14 +41,31 @@ test('the README publishes the same registry, adapter and PegGuard', () => {
   }
 });
 
-test('the superseded PegGuard is not what the CLI points at', () => {
-  // 0xB1aBE0D4… was redeployed after the PoolWipedOut fix; pointing at it would settle claims
-  // against a contract that still has the panic bug.
-  assert.notEqual(
-    DEPLOYED.pegGuard.toLowerCase(),
-    '0xb1abe0d450b778fdb32df54bb529f72d531ae8ce',
-    'the CLI is pointing at the superseded PegGuard deployment',
-  );
+test('no superseded deployment is what the CLI points at', () => {
+  // Each of these was replaced for a reason, and pointing at one would quietly cost a feature or
+  // reintroduce a bug: the PoolWipedOut panic, the missing prover bounty, the missing proportional
+  // payout, and a registry with no batch entrypoint.
+  const superseded: Record<string, readonly string[]> = {
+    pegGuard: [
+      '0xb1abe0d450b778fdb32df54bb529f72d531ae8ce', // before the PoolWipedOut fix
+      '0xc836457ad046a329e93e40a4b747e90ee53b85bc', // before FR-20
+      '0x367693043c3e8396252728caebfbab3ff43c78d5', // before FR-30
+    ],
+    registry: [
+      '0x89ab0ad8768cd06d0f3bc134ad2407705a49d309', // before FR-32
+    ],
+    adapter: [
+      '0x678c84fe193a569fbdaf58e5f0d8f290a4072735', // bound to the superseded registry
+    ],
+  };
+
+  for (const [name, olds] of Object.entries(superseded)) {
+    const current = DEPLOYED[name as keyof typeof DEPLOYED].toLowerCase();
+    assert.ok(
+      !olds.includes(current),
+      `the CLI is pointing at a superseded ${name} deployment (${current})`,
+    );
+  }
 });
 
 test('.env.example documents every variable the config loader reads', () => {

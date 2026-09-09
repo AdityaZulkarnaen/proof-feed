@@ -43,6 +43,8 @@ export async function deploy(argv: readonly string[]): Promise<number> {
   const maxNotional = flag(argv, '--max-notional') ?? '100';
   /** FR-20: share of each premium escrowed as a prover bounty, in basis points. */
   const bountyBps = numberFlag(argv, '--bounty-bps', 2_000);
+  /** FR-30: rate for proportional cover, which pays less than full cover and so costs less. */
+  const proportionalBps = numberFlag(argv, '--proportional-bps', 30);
 
   const eth = ethProvider(cfg.ethMainnetRpcUrl);
 
@@ -124,12 +126,14 @@ export async function deploy(argv: readonly string[]): Promise<number> {
       parseEther(maxNotional),
       true,
       bountyBps,
+      proportionalBps,
     );
     const cfgRc = await cfgTx.wait();
     totalGas += cfgRc.gasUsed;
     log.ok(
       `configurePool("${feed.description}", ${premiumBps} bps/30d, wait ${waitingPeriod}s, ` +
-        `max ${maxNotional} CTC, prover bounty ${bountyBps / 100}% of premium) — ${gasLine(cfgRc.gasUsed)}`,
+        `max ${maxNotional} CTC, prover bounty ${bountyBps / 100}% of premium, ` +
+        `proportional ${proportionalBps} bps/30d) — ${gasLine(cfgRc.gasUsed)}`,
     );
 
     // 5. Report

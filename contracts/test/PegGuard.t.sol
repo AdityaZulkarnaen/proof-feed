@@ -22,12 +22,15 @@ contract PegGuardTest is BaseTest {
     uint128 internal constant MAX_NOTIONAL = 100 ether;
     int256 internal constant STRIKE_097 = 97_000_000; // $0.97 on an 8-decimal feed
     uint16 internal constant BOUNTY_BPS = 2_000; // 20% of the premium goes to the prover (FR-20)
+    uint16 internal constant PROPORTIONAL_BPS_30D = 30; // 0.30% per 30 days — FR-30 pays less, so it costs less
 
     function setUp() public override {
         super.setUp();
         guard = new PegGuard(IProvenFeedRegistry(address(registry)), owner);
         vm.prank(owner);
-        guard.configurePool(USDC_FEED_ID, PREMIUM_BPS_30D, WAITING_PERIOD, MAX_NOTIONAL, true, BOUNTY_BPS);
+        guard.configurePool(
+            USDC_FEED_ID, PREMIUM_BPS_30D, WAITING_PERIOD, MAX_NOTIONAL, true, BOUNTY_BPS, PROPORTIONAL_BPS_30D
+        );
 
         vm.deal(lp, 1000 ether);
         vm.deal(lp2, 1000 ether);
@@ -119,7 +122,7 @@ contract PegGuardTest is BaseTest {
     function test_Deposit_RevertsCleanlyWhenThePoolWasFullyPaidOut() public {
         // A zero-premium pool is what makes the balance land on exactly zero after a full payout.
         vm.prank(owner);
-        guard.configurePool(USDC_FEED_ID, 0, WAITING_PERIOD, MAX_NOTIONAL, true, 0);
+        guard.configurePool(USDC_FEED_ID, 0, WAITING_PERIOD, MAX_NOTIONAL, true, 0, 0);
 
         vm.prank(lp);
         guard.deposit{value: 50 ether}(USDC_FEED_ID);
@@ -226,7 +229,9 @@ contract PegGuardTest is BaseTest {
     function test_BuyCover_RevertsWhenPoolInactive() public {
         _seedPool(200 ether);
         vm.prank(owner);
-        guard.configurePool(USDC_FEED_ID, PREMIUM_BPS_30D, WAITING_PERIOD, MAX_NOTIONAL, false, BOUNTY_BPS);
+        guard.configurePool(
+            USDC_FEED_ID, PREMIUM_BPS_30D, WAITING_PERIOD, MAX_NOTIONAL, false, BOUNTY_BPS, PROPORTIONAL_BPS_30D
+        );
         vm.prank(holder);
         vm.expectRevert(abi.encodeWithSelector(PegGuard.PoolInactive.selector, USDC_FEED_ID));
         guard.buyCover{value: 1 ether}(USDC_FEED_ID, STRIKE_097, 50 ether, 7);
@@ -258,12 +263,12 @@ contract PegGuardTest is BaseTest {
     function test_ConfigurePool_OnlyOwnerAndKnownFeed() public {
         vm.prank(stranger);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, stranger));
-        guard.configurePool(USDC_FEED_ID, 1, 0, 1 ether, true, 0);
+        guard.configurePool(USDC_FEED_ID, 1, 0, 1 ether, true, 0, 0);
 
         bytes32 unknown = keccak256("NOPE / USD");
         vm.prank(owner);
         vm.expectRevert(abi.encodeWithSelector(PegGuard.UnknownFeed.selector, unknown));
-        guard.configurePool(unknown, 1, 0, 1 ether, true, 0);
+        guard.configurePool(unknown, 1, 0, 1 ether, true, 0, 0);
     }
 
     // ── T-P07…T-P13: claims ──────────────────────────────────────────────────────────────────────
@@ -275,7 +280,7 @@ contract PegGuardTest is BaseTest {
 
         uint256 before = holder.balance;
         vm.expectEmit(true, true, true, true, address(guard));
-        emit PegGuard.ClaimPaid(policyId, DEPEG_ROUND_ID, holder, 50 ether, keeper);
+        emit PegGuard.ClaimPaid(policyId, DEPEG_ROUND_ID, holder, 50 ether, 0, keeper);
         vm.prank(keeper);
         guard.claim(policyId, DEPEG_ROUND_ID);
 

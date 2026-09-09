@@ -35,6 +35,8 @@ contract Deploy is Script {
         uint32 waitingPeriod = uint32(vm.envOr("POOL_WAITING_PERIOD", uint256(0)));
         uint128 maxNotional = uint128(vm.envOr("POOL_MAX_NOTIONAL", uint256(100 ether)));
         uint16 bountyBps = uint16(vm.envOr("POOL_PROVER_BOUNTY_BPS", uint256(2000)));
+        // FR-30: proportional cover pays less than full cover, so it is written at a lower rate.
+        uint16 proportionalBps = uint16(vm.envOr("POOL_PROPORTIONAL_BPS_30D", uint256(30)));
 
         bytes32 feedId = keccak256(bytes(feedDescription));
 
@@ -50,7 +52,9 @@ contract Deploy is Script {
             new ProvenFeedAdapter(IProvenFeedRegistry(address(registry)), feedId);
 
         PegGuard pegGuard = new PegGuard(IProvenFeedRegistry(address(registry)), owner);
-        pegGuard.configurePool(feedId, premiumBps, waitingPeriod, maxNotional, true, bountyBps);
+        pegGuard.configurePool(
+            feedId, premiumBps, waitingPeriod, maxNotional, true, bountyBps, proportionalBps
+        );
 
         vm.stopBroadcast();
 

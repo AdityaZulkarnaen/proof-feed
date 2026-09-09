@@ -77,7 +77,10 @@ test('T-S04: the only state-changing entrypoints are registration, recordRound a
   assert.deepEqual(names, [
     'acceptOwnership',
     'execute',
+    // FR-32 adds a second proof entrypoint. It takes the same shape as `recordRound` — proof
+    // arguments only, no price anywhere — so the closed set this test pins grows by exactly one.
     'recordRound',
+    'recordRoundBatch',
     'registerFeed',
     'renounceOwnership',
     'setFeedActive',
@@ -99,6 +102,42 @@ test('recordRound takes the same proof arguments as ASCBase.execute, minus `acti
     recordTypes,
     executeTypes.slice(1),
     'recordRound must carry exactly the proof arguments, so no proof field is silently dropped',
+  );
+});
+
+test('FR-32: recordRoundBatch is the same proof surface, one shared continuity proof', () => {
+  const abi = loadAbi('ProvenFeedRegistry');
+  const batch = abi.find((e) => e.name === 'recordRoundBatch');
+  assert.ok(batch, 'the batch entrypoint exists');
+
+  const types = (batch.inputs ?? []).map((i) => i.type);
+  assert.deepEqual(
+    types,
+    ['uint64', 'uint64[]', 'bytes[]', 'tuple[]', 'bytes32', 'bytes32[]'],
+    'chainKey, per-tx heights/bytes/merkle proofs, then ONE continuity proof for the whole batch',
+  );
+
+  // The saving only exists because the continuity proof is scalar while everything else is an
+  // array. If a future edit made the roots per-transaction, batching would buy nothing.
+  const roots = (batch.inputs ?? []).at(-1);
+  assert.equal(roots?.name, 'continuityRoots');
+  assert.equal(roots?.type, 'bytes32[]', 'a single chain of roots, not an array of chains');
+
+  // And no price may enter through it either (T-S04 extended to the new entrypoint).
+  for (const input of flatten(batch.inputs)) {
+    assert.ok(!/^int\d*$/.test(input.type), `signed input on the batch path: ${input.name}`);
+  }
+});
+
+test('FR-30: the payout formula is exposed as a pure function anyone can check', () => {
+  const abi = loadAbi('PegGuard');
+  const payoutFor = abi.find((e) => e.name === 'payoutFor');
+  assert.ok(payoutFor, 'payoutFor exists');
+  assert.equal(payoutFor.stateMutability, 'pure', 'it depends on nothing but its arguments');
+  assert.deepEqual(
+    (payoutFor.inputs ?? []).map((i) => i.type),
+    ['uint8', 'uint128', 'int256', 'int256'],
+    'mode, notional, strike, answer',
   );
 });
 

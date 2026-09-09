@@ -80,8 +80,65 @@ exercise the **mock** verifier say `Mock` in their name (index41 convention — 
 | T-S07 | `aggregatorRoundId ≥ 2^64` → revert in `composeRoundId` |
 | T-S08 | Pool: claim when `balance < notional` cannot happen (locked accounting) — invariant T-P16 covers |
 
+## 5b. P2 — proportional payout (FR-30) and batch proving (FR-32)
+
+`contracts/test/ProportionalPayout.t.sol` — 13 tests.
+
+| ID | Test | Assertion |
+|---|---|---|
+| T-P17 | `test_PayoutFor_TracksTheDepthOfTheBreach` | 9/97 of a 50 CTC notional; a one-unit breach pays one 97-millionth; `FULL` pays everything for the same input |
+| T-P18 | `test_PayoutFor_IsCappedAtTheNotional` | answer 0, −1 and `type(int256).min` all pay exactly the notional, never more |
+| T-P19 | `testFuzz_PayoutFor_NeverExceedsTheNotional` | 256 runs over `(notional, strike, answer)` — the property INV-07 rests on |
+| T-P20 | `test_QuoteFor_ProportionalCostsLessThanFull` | 30 bps vs 50 bps; `quote()` still means full cover |
+| T-P21 | `test_QuoteFor_RevertsWhenThePoolDoesNotOfferProportionalCover` | rate 0 → `ProportionalCoverUnavailable`, on both the quote and the purchase |
+| T-P22 | `test_BuyCover_ChargesTheProportionalPremium` | paying the full premium for proportional cover → `WrongPremium`; the mode is stored on the policy |
+| T-P23 | `test_Claim_ProportionalPaysTheBreachAndReturnsTheRest` | the real 2023 depeg round; `ClaimPaid(payout, released)`; the whole reserve unlocks but only the payout leaves |
+| T-P24 | `test_Claim_ProportionalRemainderBecomesFreeLiquidityAgain` | the remainder is withdrawable by an LP, not stranded |
+| T-P25 | `test_Claim_ProportionalLeavesTheContractSolvent` | `address(guard).balance == pool.balance + bountyEscrow` after a partial payout |
+| T-P26 | `test_Claim_ProportionalStillPaysTheFullProverBounty` | the bounty is not scaled down — the prover did the same work |
+| T-P27 | `test_Claim_ProportionalRevertsRatherThanSettlingForZero` | a breach too shallow to pay one wei → `PayoutTooSmall`, policy stays `ACTIVE` |
+| T-P28 | `test_Expire_ProportionalReleasesTheFullReserve` | expiry releases the maximum exposure, mode notwithstanding |
+| T-P29 | `test_Claim_FullModeStillPaysTheWholeNotional` | regression guard: `FULL` behaviour is untouched, `payout == notional` |
+
+`contracts/test/PegGuardInvariant.t.sol` gains `invariant_PayoutNeverExceedsReservedNotional` (every
+CLAIMED policy's payout equals the formula applied to its proven round, and never exceeds the
+notional) and the handler now fuzzes the payout mode. Because the fuzzer reaches a proportional
+*claim* only rarely, `test_Lifecycle_InvariantsHoldAcrossAFullCycle` walks one deterministically —
+the same guard against vacuity that the ghost counters exist for.
+
+`contracts/test/RecordRoundBatch.t.sol` — 16 tests.
+
+| ID | Test | Assertion |
+|---|---|---|
+| T-B01 | `test_RecordRoundBatch_StoresEveryRound` | both real mainnet fixtures decode and store; batch order preserved in the return value |
+| T-B02 | `test_RecordRoundBatch_CallsThePrecompileOnceForTheWholeBatch` | one batch call, zero single calls — the mechanism, asserted |
+| T-B03 | `test_RecordRoundBatch_LatestRoundIsStillMonotonic` | an older round inside the batch does not move `latestRoundId` back (INV-05) |
+| T-B04 | `test_RecordRoundBatch_EmitsTransactionVerifiedPerElement` | one `TransactionVerified` from `0x…0FD2` per proven transaction |
+| T-B05 | `test_RecordRoundBatch_RevertsOnDuplicateInsideTheBatch` | the same transaction twice in one call → `"Query already processed"` |
+| T-B06 | `test_RecordRoundBatch_RevertsWhenAnElementWasAlreadyProvenSingly` | batch cannot re-prove what `recordRound` consumed |
+| T-B07 | `test_RecordRound_RevertsAfterTheQueryWasConsumedByABatch` | and the reverse direction |
+| T-B08 | `test_RecordRoundBatch_RevertsAndStoresNothingWhenVerdictIsFalse` | nothing stored, `latestRoundId` untouched |
+| T-B09 | `test_RecordRoundBatch_OneRejectedElementDiscardsTheEntireBatch` | all-or-nothing: the good element is discarded with the bad one (D-15) |
+| T-B10 | `test_RecordRoundBatch_FailedBatchDoesNotBurnTheQueryIds` | the hoisted dedup writes roll back with everything else, so a retry works |
+| T-B11 | `test_RecordRoundBatch_RevertsOnEmptyBatch` | `EmptyBatch` |
+| T-B12 | `test_RecordRoundBatch_RevertsAboveMaxBatch` | `BatchTooLarge(MAX_BATCH + 1)` |
+| T-B13 | `test_RecordRoundBatch_RevertsOnLengthMismatch` | `BatchLengthMismatch` — parallel arrays must line up or an element would be proven against another's proof |
+| T-B14 | `test_RecordRoundBatch_SingleElementMatchesTheSinglePath` | a one-element batch behaves exactly like `recordRound` |
+| T-B15 | `test_RecordRoundBatch_RejectsWrongChainKey` | INV-03 holds inside a batch |
+| T-B16 | `test_RecordRoundBatch_RejectsDeactivatedEmitter` | INV-07 holds inside a batch |
+
+**FR-31 has no tests because it was not built.** The research that closed it (zero
+`AggregatorConfirmed` events across thirteen mainnet feeds since block 16,500,000) is recorded in
+D-14 and `docs/DEPLOYMENT.md` §P2, and is reproducible with `eth_getLogs` against any of those
+proxies.
+
 ## 6. CLI tests (`cli/test`, vitest or node:test)
 - `chainlink.decodeAnswerUpdated` on a recorded real log → matches fixture.
+- FR-32: `recordRoundBatch`'s ABI shape — per-transaction arrays but a **scalar** continuity proof.
+  If a future edit made the roots per-transaction, batching would buy nothing; the test pins it.
+- FR-30: `payoutFor` is exposed `pure`, so a front-end or keeper can check a payout before anything
+  settles.
+- No superseded deployment address is what the CLI points at (one entry per redeploy and its reason).
 - `roundId` composition equals `proxy.latestRoundData().roundId` semantics (recorded value).
 - `toProofArgs` shape matches the `recordRound` ABI (encode with ethers Interface → no throw).
 - Config loader fails fast on missing vars.

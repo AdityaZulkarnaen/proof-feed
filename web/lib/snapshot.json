@@ -1,31 +1,42 @@
 {
   "note": "Committed fallback. Shown, labelled `cached`, only when the live CC3 read fails. Refresh with node scripts/refresh-snapshot.mjs",
-  "readAt": "2026-09-09T06:19:39.996Z",
+  "readAt": "2026-09-09T07:55:34.454Z",
   "feeds": [
     {
       "description": "USDC / USD",
-      "roundId": "55340232221128656026",
-      "answer": "99988765",
+      "roundId": "36893488147419104215",
+      "answer": "88000000",
       "decimals": 8,
-      "updatedAt": 1788768023,
-      "provenAt": 1788806565
+      "updatedAt": 1678521083,
+      "provenAt": 1788938130
     },
     {
       "description": "ETH / USD",
-      "roundId": "129127208515966894751",
-      "answer": "249146085391",
+      "roundId": "129127208515966894753",
+      "answer": "251125370000",
       "decimals": 8,
-      "updatedAt": 1788932807,
-      "provenAt": 1788934620
+      "updatedAt": 1788938639,
+      "provenAt": 1788939795
     }
   ],
   "policy": {
     "status": "CLAIMED",
-    "claimRoundId": "129127208515966894751",
+    "claimRoundId": "129127208515966894753",
     "notionalWei": "50000000000000000000",
-    "poolBalanceWei": "150046666666666666667",
+    "poolBalanceWei": "145661601825343381976",
     "poolLockedWei": "0",
     "proverBountyBps": 2000,
-    "bountyEscrowWei": "0"
+    "bountyEscrowWei": "0",
+    "mode": "FULL",
+    "payoutWei": "50000000000000000000",
+    "proportional": {
+      "status": "CLAIMED",
+      "mode": "PROPORTIONAL",
+      "payoutWei": "4413064841323284691",
+      "notionalWei": "50000000000000000000",
+      "claimRoundId": "129127208515966894753"
+    },
+    "proportionalBpsPer30d": 30,
+    "premiumBpsPer30d": 50
   }
 }

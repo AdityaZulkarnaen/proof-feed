@@ -243,3 +243,121 @@ export function toProofArgs(d: ContinuityResponse): ProofArgs {
     d.continuityProof.roots,
   ] as const;
 }
+
+/** One transaction's slot in a batch proof, flattened out of the SDK's nested maps. */
+export interface BatchElement {
+  height: number;
+  txHash: string;
+  txBytes: string;
+  merkleProof: { root: string; siblings: { hash: string; isLeft: boolean }[] };
+}
+
+/** A batch proof: one continuity proof, many transactions (FR-32). */
+export interface BatchProof {
+  chainKey: number;
+  fromHeader: number;
+  toHeader: number;
+  lowerEndpointDigest: string;
+  continuityRoots: string[];
+  elements: BatchElement[];
+  cached: boolean;
+}
+
+/**
+ * `POST /api/v1/proof-batch-by-tx/{chainKey}` via the SDK — FR-32.
+ *
+ * The response nests Merkle proofs as `header -> txIndex -> entry`; this flattens them into the
+ * index-aligned arrays `recordRoundBatch` takes, sorted by header so the order is deterministic
+ * rather than dependent on map iteration.
+ */
+export async function fetchBatchProof(
+  pb: proofProvider.service.ProofBuilder,
+  txHashes: readonly string[],
+): Promise<BatchProof> {
+  const d = await retry(
+    'ProofBuilder.getBatchProof',
+    async () => {
+      const res = await pb.getBatchProof([...txHashes]);
+      if (!res.success || !res.data) throw new Error(`batch proof failed: ${res.error ?? 'unknown error'}`);
+      return res.data;
+    },
+    { timeoutMs: 180_000, attempts: 3 },
+  );
+
+  const elements: BatchElement[] = [];
+  for (const [height, byIndex] of [...d.merkleProofs.entries()].sort((a, b) => a[0] - b[0])) {
+    for (const [, e] of [...byIndex.entries()].sort((a, b) => a[0] - b[0])) {
+      elements.push({
+        height,
+        txHash: e.txHash,
+        txBytes: e.txBytes,
+        merkleProof: {
+          root: e.merkleProof.root,
+          siblings: e.merkleProof.siblings.map((s) => ({ hash: s.hash, isLeft: s.isLeft })),
+        },
+      });
+    }
+  }
+
+  log.surface(
+    'ProofBuilder.getBatchProof',
+    `${txHashes.length} tx -> headers ${d.fromHeader.toLocaleString()}-${d.toHeader.toLocaleString()}, ` +
+      `${elements.length} merkle proofs, ONE continuity proof of ${d.continuityProof.roots.length} roots, ` +
+      `cached=${d.cached}`,
+  );
+
+  return {
+    chainKey: d.chainKey,
+    fromHeader: d.fromHeader,
+    toHeader: d.toHeader,
+    lowerEndpointDigest: d.continuityProof.lowerEndpointDigest,
+    continuityRoots: d.continuityProof.roots,
+    elements,
+    cached: d.cached,
+  };
+}
+
+/** Pre-flight `eth_call` against the precompile's BATCH overload — never submit on false. */
+export async function dryRunBatch(
+  prover: blockProver.PrecompileBlockProver,
+  b: BatchProof,
+): Promise<boolean> {
+  const ok = await retry(
+    'PrecompileBlockProver.verifyBatch',
+    () =>
+      prover.verifyBatch(
+        b.chainKey,
+        b.elements.map((e) => e.height),
+        b.elements.map((e) => e.txBytes),
+        b.elements.map((e) => e.merkleProof) as never,
+        { lowerEndpointDigest: b.lowerEndpointDigest, roots: b.continuityRoots },
+      ),
+    { timeoutMs: 60_000, attempts: 3 },
+  );
+  log.surface(
+    'PrecompileBlockProver.verifyBatch',
+    `dry-run (eth_call, 0xFD2, ${b.elements.length} tx, 1 shared continuity proof) -> ${ok}`,
+  );
+  return ok;
+}
+
+/** Argument tuple for `ProvenFeedRegistry.recordRoundBatch` (FR-32). */
+export type BatchProofArgs = readonly [
+  chainKey: number,
+  blockHeights: number[],
+  encodedTransactions: string[],
+  merkleProofs: { root: string; siblings: { hash: string; isLeft: boolean }[] }[],
+  lowerEndpointDigest: string,
+  continuityRoots: string[],
+];
+
+export function toBatchProofArgs(b: BatchProof): BatchProofArgs {
+  return [
+    b.chainKey,
+    b.elements.map((e) => e.height),
+    b.elements.map((e) => e.txBytes),
+    b.elements.map((e) => e.merkleProof),
+    b.lowerEndpointDigest,
+    b.continuityRoots,
+  ] as const;
+}

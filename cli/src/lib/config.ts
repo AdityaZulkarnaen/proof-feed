@@ -15,13 +15,14 @@ const envPath = resolve(REPO_ROOT, '.env');
 if (existsSync(envPath)) loadDotenv({ path: envPath, quiet: true });
 
 /**
- * The P0 deployment on Creditcoin CC3 testnet, all source-verified on Blockscout.
+ * The current deployment on Creditcoin CC3 testnet, all source-verified on Blockscout.
  * Used as defaults so the CLI is useful straight out of a clone (docs/DEPLOYMENT.md).
+ * Superseded addresses stay listed in docs/DEPLOYMENT.md rather than here.
  */
 export const DEPLOYED = {
-  registry: '0x89ab0ad8768CD06d0f3bc134ad2407705a49d309',
-  adapter: '0x678C84Fe193a569FbDAF58e5f0d8f290a4072735',
-  pegGuard: '0x367693043C3E8396252728cAEBfBAB3fF43c78d5',
+  registry: '0x086Ae43C078122A419887a2D73a6d8e7Be3679Ed',
+  adapter: '0x639f24D0E4298031Da29E523a81910166596027D',
+  pegGuard: '0x7Ae5B58c75Fe194F72d1d8a8527688339D013a6e',
   probe: '0x846D0C55a916e925331599bf086f9B203E68917B',
 } as const;
 

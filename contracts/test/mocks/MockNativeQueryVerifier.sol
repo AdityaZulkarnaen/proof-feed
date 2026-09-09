@@ -23,7 +23,14 @@ contract MockNativeQueryVerifier is INativeQueryVerifier {
     /// @notice How many times `verifyAndEmit` has been called (asserts the registry really calls it).
     uint256 public verifyAndEmitCalls;
 
+    /// @notice How many times the BATCH `verifyAndEmit` overload has been called (FR-32).
+    uint256 public verifyAndEmitBatchCalls;
+
+    /// @notice Element count of the most recent batch call.
+    uint256 public lastBatchSize;
+
     error NotSupported();
+    error BatchLengthMismatch();
 
     /// @notice Set the verdict returned to callers.
     function setResult(bool value) external {
@@ -61,22 +68,43 @@ contract MockNativeQueryVerifier is INativeQueryVerifier {
         return result;
     }
 
-    /// @notice Batch verification is out of scope for P0 (FR-32 is P2).
-    function verifyAndEmit(uint64, uint64[] calldata, bytes[] calldata, MerkleProof[] calldata, ContinuityProof calldata)
-        external
-        pure
-        returns (bool)
-    {
-        revert NotSupported();
+    /// @inheritdoc INativeQueryVerifier
+    /// @dev FR-32. One call, one shared continuity proof, one verdict — and a `TransactionVerified`
+    ///      per element, which is how the real precompile behaves and what the batch demo shows.
+    function verifyAndEmit(
+        uint64 chainKey,
+        uint64[] calldata heights,
+        bytes[] calldata encodedTransactions,
+        MerkleProof[] calldata merkleProofs,
+        ContinuityProof calldata
+    ) external returns (bool) {
+        ++verifyAndEmitBatchCalls;
+        lastBatchSize = heights.length;
+        if (heights.length != encodedTransactions.length || heights.length != merkleProofs.length) {
+            revert BatchLengthMismatch();
+        }
+
+        bool ok = result;
+        for (uint256 i; i < heights.length; ++i) {
+            emit TransactionVerified(chainKey, heights[i], calculateTxIndex(merkleProofs[i]));
+            if (rejectRoot != bytes32(0) && merkleProofs[i].root == rejectRoot) ok = false;
+        }
+        return ok;
     }
 
-    /// @notice Batch verification is out of scope for P0 (FR-32 is P2).
-    function verify(uint64, uint64[] calldata, bytes[] calldata, MerkleProof[] calldata, ContinuityProof calldata)
-        external
-        pure
-        returns (bool)
-    {
-        revert NotSupported();
+    /// @inheritdoc INativeQueryVerifier
+    function verify(
+        uint64,
+        uint64[] calldata heights,
+        bytes[] calldata,
+        MerkleProof[] calldata merkleProofs,
+        ContinuityProof calldata
+    ) external view returns (bool) {
+        bool ok = result;
+        for (uint256 i; i < heights.length; ++i) {
+            if (rejectRoot != bytes32(0) && merkleProofs[i].root == rejectRoot) ok = false;
+        }
+        return ok;
     }
 
     /// @inheritdoc INativeQueryVerifier

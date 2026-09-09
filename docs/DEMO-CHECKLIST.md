@@ -16,7 +16,7 @@ Every step reads a live chain. **Without wifi almost nothing in this demo works:
 | `cd contracts && forge test` | no — the only thing that runs offline |
 
 So: do not plan to record on the move. The one thing worth filming offline is `forge test`
-(90 tests, green, no network) — and even that needs `npm ci` to have run once before.
+(130 tests, green, no network) — and even that needs `npm ci` to have run once before.
 
 ## Before you hit record
 
@@ -55,43 +55,62 @@ Let it run. Narrate the `[surface]` lines — they name the exact Attestcoin cal
 
 **0:55 — Blockscout, the proof**
 
-`https://creditcoin-testnet.blockscout.com/tx/0x51391915f812b640d8eafafdfd44205777d37d12d33c7319c9dc467b0f912d06`
+`https://creditcoin-testnet.blockscout.com/tx/0x5c5f1c6d7351ccd1c2418c75bff1ae345734b026f12d7b7ea483b211aadb3a7c`
 
 Scroll to the logs. Two things must be visible together:
 - `TransactionVerified` emitted by `0x…0FD2` — the precompile
 - `RoundProven` emitted by the registry, `answer = 88000000`
 
 > "The precompile verified inclusion and continuity. The contract then decoded the log out of the
-> bytes the precompile had just verified. 628,000 gas — under one percent of a Creditcoin block."
+> bytes the precompile had just verified. 650,000 gas — under one percent of a Creditcoin block."
 
-**1:20 — The Chainlink interface**
+**1:10 — The Chainlink interface**
 
 ```bash
-cast call 0x678C84Fe193a569FbDAF58e5f0d8f290a4072735 \
-  "getRoundData(uint80)(uint80,int256,uint256,uint256,uint80)" 36893488147419104215 \
-  --rpc-url https://rpc.cc3-testnet.creditcoin.network
+cast call 0x639f24D0E4298031Da29E523a81910166596027D   "getRoundData(uint80)(uint80,int256,uint256,uint256,uint80)" 36893488147419104215   --rpc-url https://rpc.cc3-testnet.creditcoin.network
 ```
 
 > "A three-year-old Chainlink round, readable on Creditcoin through the ordinary
 > AggregatorV3Interface. Any contract already written for Chainlink works unmodified."
 
-**1:40 — Blockscout, the claim**
+**1:25 — Blockscout, the claim**
 
-`https://creditcoin-testnet.blockscout.com/tx/0x9427273f95483be97491eee0010960710ab938865756de85855cb1cd7f4b4e52`
+`https://creditcoin-testnet.blockscout.com/tx/0xa6c5ffa8f670e590d2b1b36f559a48e03cb4eadb97c333e56c72703e4dbd36b6`
 
-Four events in one transaction: `TransactionVerified` → `RoundProven` → `LatestRoundUpdated` →
-`ClaimPaid`.
+Five events in one transaction: `TransactionVerified` → `RoundProven` → `LatestRoundUpdated` →
+`BountyAccrued` → `ClaimPaid`.
 > "A policy paid 50 CTC because a Chainlink round printed below its strike. Proved and settled in a
-> single transaction. Nobody approved it — the round did."
+> single transaction. Nobody approved it — the round did. And a slice of the premium went to whoever
+> proved that round, which is what makes running the keeper worth someone's gas."
 
-**2:20 — README limitations**
+**1:50 — The same round, paid two ways**
+
+`https://creditcoin-testnet.blockscout.com/tx/0x013188937ea2bede2fe7e41657bfe0a029b4cbd464dd2b11be049a0f9d701d52`
+
+Put policy 1's `ClaimPaid` next to policy 0's. Same strike, same notional, same round.
+> "Fifty CTC and four-point-four CTC, from the identical Chainlink round. Full cover is a trigger.
+> Proportional cover pays the depth of the breach — an eight-point-eight percent drop pays
+> eight-point-eight percent — and costs forty percent less, because it pays less. The rest of the
+> reserve goes straight back to the liquidity providers."
+
+**2:15 — Three rounds, one proof**
+
+`https://creditcoin-testnet.blockscout.com/tx/0x882c6ae14cb691ce9d1da231ea4d1733b09e5b986d833f17b529c4217ea33da2`
+
+Point at the three `TransactionVerified` logs from `0x…0FD2`.
+> "Three Chainlink rounds, one shared continuity proof, one transaction. Eighteen percent cheaper
+> than proving them separately — but only because these three landed inside four blocks. Spread them
+> across an hour and batching costs more, because the shared proof has to span the gap. The README
+> publishes both numbers, and the CLI warns you before you spend the gas."
+
+**2:35 — README limitations**
 
 > "What it does not do: prove state, prove freshness, or write back to Ethereum. It proves a round
 > happened, which is exactly what a parametric claim needs. And you cannot buy cover for a depeg
 > that already printed — cover always starts in the future. That is why the claim demo uses a live
 > round, and the README says so."
 
-**2:45 — Repo + links.** End.
+**2:50 — Repo + links.** End.
 
 ## Rules
 
@@ -104,9 +123,12 @@ Four events in one transaction: `TransactionVerified` → `RoundProven` → `Lat
 | What | URL |
 |---|---|
 | Repo | https://github.com/AdityaZulkarnaen/proof-feed |
-| Registry | https://creditcoin-testnet.blockscout.com/address/0x89ab0ad8768CD06d0f3bc134ad2407705a49d309 |
-| Adapter | https://creditcoin-testnet.blockscout.com/address/0x678C84Fe193a569FbDAF58e5f0d8f290a4072735 |
-| PegGuard | https://creditcoin-testnet.blockscout.com/address/0x367693043C3E8396252728cAEBfBAB3fF43c78d5 |
-| 2023 depeg proven | https://creditcoin-testnet.blockscout.com/tx/0x51391915f812b640d8eafafdfd44205777d37d12d33c7319c9dc467b0f912d06 |
-| Claim paid | https://creditcoin-testnet.blockscout.com/tx/0x9427273f95483be97491eee0010960710ab938865756de85855cb1cd7f4b4e52 |
+| Registry | https://creditcoin-testnet.blockscout.com/address/0x086Ae43C078122A419887a2D73a6d8e7Be3679Ed |
+| Adapter | https://creditcoin-testnet.blockscout.com/address/0x639f24D0E4298031Da29E523a81910166596027D |
+| PegGuard | https://creditcoin-testnet.blockscout.com/address/0x7Ae5B58c75Fe194F72d1d8a8527688339D013a6e |
+| 2023 depeg proven | https://creditcoin-testnet.blockscout.com/tx/0x5c5f1c6d7351ccd1c2418c75bff1ae345734b026f12d7b7ea483b211aadb3a7c |
+| Claim paid (FULL) | https://creditcoin-testnet.blockscout.com/tx/0xa6c5ffa8f670e590d2b1b36f559a48e03cb4eadb97c333e56c72703e4dbd36b6 |
+| Claim paid (PROPORTIONAL) | https://creditcoin-testnet.blockscout.com/tx/0x013188937ea2bede2fe7e41657bfe0a029b4cbd464dd2b11be049a0f9d701d52 |
+| Batch — 3 rounds, one proof | https://creditcoin-testnet.blockscout.com/tx/0x882c6ae14cb691ce9d1da231ea4d1733b09e5b986d833f17b529c4217ea33da2 |
+| Landing page | `cd web && npm run dev`, or your Vercel URL |
 | Source depeg tx (Etherscan) | https://etherscan.io/tx/0x24500a30910fb1a99de3c13eacb4e4dd05334e4078615dcf276c58dcfbddacd8 |

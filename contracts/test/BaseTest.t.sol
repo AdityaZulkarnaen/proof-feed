@@ -149,6 +149,44 @@ abstract contract BaseTest is Test {
         );
     }
 
+    /// @notice Submit several fixtures through `recordRoundBatch` as `keeper` (FR-32).
+    /// @dev The shared continuity proof is taken from `fs[0]`. That mirrors the prover's batch
+    ///      response, which returns exactly one `ContinuityProof` for the whole span. The mock
+    ///      verifier does not check it cryptographically — what these tests exercise is the
+    ///      registry's batch orchestration on top of a verdict, against real mainnet tx bytes.
+    function _recordBatch(ProofFixture[] memory fs) internal returns (uint80[] memory) {
+        (
+            uint64[] memory heights,
+            bytes[] memory txs,
+            INativeQueryVerifier.MerkleProof[] memory proofs
+        ) = _batchArgs(fs);
+        vm.prank(keeper);
+        return registry.recordRoundBatch(
+            fs[0].chainKey, heights, txs, proofs, fs[0].lowerEndpointDigest, fs[0].continuityRoots
+        );
+    }
+
+    /// @dev Split fixtures into the parallel arrays `recordRoundBatch` takes.
+    function _batchArgs(ProofFixture[] memory fs)
+        internal
+        pure
+        returns (
+            uint64[] memory heights,
+            bytes[] memory txs,
+            INativeQueryVerifier.MerkleProof[] memory proofs
+        )
+    {
+        uint256 n = fs.length;
+        heights = new uint64[](n);
+        txs = new bytes[](n);
+        proofs = new INativeQueryVerifier.MerkleProof[](n);
+        for (uint256 i; i < n; ++i) {
+            heights[i] = fs[i].blockHeight;
+            txs[i] = fs[i].encodedTransaction;
+            proofs[i] = INativeQueryVerifier.MerkleProof({root: fs[i].merkleRoot, siblings: fs[i].siblings});
+        }
+    }
+
     /// @dev Produce a fixture with a DIFFERENT query id but the same payload.
     ///      `_computeQueryId` hashes `(chainKey, blockHeight, calculateTxIndex(siblings))` — the
     ///      merkle root is not part of it — so the laterality of a sibling is what must change.

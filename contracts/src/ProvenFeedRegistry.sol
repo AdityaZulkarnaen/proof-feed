@@ -39,6 +39,11 @@ contract ProvenFeedRegistry is ASCBase, Ownable2Step, IProvenFeedRegistry {
     /// @dev Bounds gas. A Chainlink `transmit` carries a handful of logs; 64 is far above reality.
     uint256 public constant MAX_LOGS = 64;
 
+    /// @notice Upper bound on transactions sharing one continuity proof in `recordRoundBatch` (FR-32).
+    /// @dev The real limit is the Creditcoin block gas cap; this is a defensive ceiling so a caller
+    ///      cannot construct a batch that reverts only after burning the whole block's gas.
+    uint256 public constant MAX_BATCH = 16;
+
     /// @dev Canonical metadata per feed, taken from the first registration of that feed id.
     mapping(bytes32 feedId => Feed) private _feeds;
     /// @dev `emitterKey => feedId`. Zero means "not a registered aggregator".
@@ -149,6 +154,76 @@ contract ProvenFeedRegistry is ASCBase, Ownable2Step, IProvenFeedRegistry {
         processedQueries[queryId] = true;
 
         return _record(chainKey, queryId, encodedTransaction);
+    }
+
+    /// @inheritdoc IProvenFeedRegistry
+    /// @dev Same security properties as `recordRound`, exercised through the precompile's batch
+    ///      overload (FR-32). Two details worth stating:
+    ///
+    ///      **Why the dedup write happens before verification.** Each transaction has its own query
+    ///      id, and the batch is verified as a unit, so the per-element `processedQueries` write is
+    ///      hoisted into the first loop. That makes an intra-batch duplicate — the same transaction
+    ///      submitted twice inside one call — fail on its second occurrence for free. Ordering is
+    ///      safe because a failed verification reverts the whole call, unwinding every write.
+    ///
+    ///      **Why the batch is all-or-nothing.** `verifyAndEmit` returns a single bool for the
+    ///      whole set, so there is no way to attribute a failure to one element. Reverting keeps
+    ///      the guarantee that a stored round was always individually verified.
+    function recordRoundBatch(
+        uint64 chainKey,
+        uint64[] calldata blockHeights,
+        bytes[] calldata encodedTransactions,
+        INativeQueryVerifier.MerkleProof[] calldata merkleProofs,
+        bytes32 lowerEndpointDigest,
+        bytes32[] calldata continuityRoots
+    ) external returns (uint80[] memory roundIds) {
+        uint256 n = blockHeights.length;
+        if (n == 0) revert EmptyBatch();
+        if (n > MAX_BATCH) revert BatchTooLarge(n);
+        if (encodedTransactions.length != n || merkleProofs.length != n) {
+            revert BatchLengthMismatch(n, encodedTransactions.length, merkleProofs.length);
+        }
+
+        // 1. Replay protection for every element, including against each other.
+        bytes32[] memory queryIds = new bytes32[](n);
+        for (uint256 i; i < n; ++i) {
+            bytes32 queryId = _computeQueryId(
+                chainKey, blockHeights[i], merkleProofs[i].root, merkleProofs[i].siblings
+            );
+            require(!processedQueries[queryId], "Query already processed");
+            processedQueries[queryId] = true;
+            queryIds[i] = queryId;
+        }
+
+        // 2. One precompile call, one shared continuity proof, every transaction verified.
+        bool verified = VERIFIER.verifyAndEmit(
+            chainKey,
+            blockHeights,
+            encodedTransactions,
+            merkleProofs,
+            INativeQueryVerifier.ContinuityProof({
+                lowerEndpointDigest: lowerEndpointDigest,
+                roots: continuityRoots
+            })
+        );
+        require(verified, "Proof of inclusion verification failed");
+
+        // 3. Decode each verified transaction exactly as the single-proof path does.
+        uint80[][] memory perTx = new uint80[][](n);
+        uint256 total;
+        for (uint256 i; i < n; ++i) {
+            perTx[i] = _record(chainKey, queryIds[i], encodedTransactions[i]);
+            total += perTx[i].length;
+        }
+
+        roundIds = new uint80[](total);
+        uint256 k;
+        for (uint256 i; i < n; ++i) {
+            uint80[] memory ids = perTx[i];
+            for (uint256 j; j < ids.length; ++j) {
+                roundIds[k++] = ids[j];
+            }
+        }
     }
 
     /// @dev Decode a set of verified transaction bytes and store every round we recognise.
