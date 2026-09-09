@@ -182,6 +182,120 @@ p {
   }
 }
 
+/* ── Header plate: the instrument's own identification bar ────────────────────────────────── */
+
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  /* Opaque soot and one hairline. No blur, no shadow, no radius: a floating glass pill is the
+     category default this world refuses, and elevation is declared once, on the drum. */
+  background: var(--soot);
+  border-bottom: var(--rule);
+}
+
+.navInner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  min-height: 3.25rem;
+}
+
+.brand {
+  display: flex;
+  align-items: baseline;
+  gap: 0.625rem;
+  text-decoration: none;
+  flex: none;
+}
+
+/* The mark sits on the type's baseline rather than centred on it, the way a stamped station
+   identifier sits on its rule. */
+.brand > svg {
+  align-self: center;
+  flex: none;
+}
+
+.brandName {
+  font-family: var(--font-label), sans-serif;
+  font-size: 1.0625rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  color: var(--scratch);
+}
+
+.brandSub {
+  font-family: var(--font-label), sans-serif;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  /* --scratch-faint is 3.21:1 on soot: instrument markings only, never something a visitor reads.
+     Which chain this is, is read. */
+  color: var(--scratch-dim);
+  padding-left: 0.625rem;
+  border-left: var(--rule);
+}
+
+.brand:hover .brandName {
+  color: var(--amber);
+}
+
+.navLinks {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.navLink {
+  font-family: var(--font-label), sans-serif;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--scratch-dim);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.navLink:hover {
+  color: var(--amber);
+}
+
+.navRepo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding-left: 1.5rem;
+  border-left: var(--rule);
+  color: var(--scratch);
+}
+
+/* Below 46rem the markings step aside; the bar keeps identity and the way to verify. */
+@media (max-width: 45.99rem) {
+  .brandSub,
+  .navLinks .navLink:not(.navRepo) {
+    display: none;
+  }
+
+  .navRepo {
+    padding-left: 0;
+    border-left: 0;
+  }
+}
+
+/* Anchors must clear the sticky plate. Scoped to the actual jump targets rather than every id. */
+main > [id] {
+  scroll-margin-top: 4.25rem;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
 /* ── Ruled rows: the record's own annotation lines, never cards ───────────────────────────── */
 
 .rows {

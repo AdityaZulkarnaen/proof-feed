@@ -90,6 +90,42 @@ Two rules govern it, and both are load-bearing rather than decorative:
 The caption states what the trace is and what has been proven from it: 295 published, 1 proven. The
 feed's lower-bound nature is therefore visible in the hero rather than only confessed in prose.
 
+## The mark
+
+`components/Logo.tsx`. A stylus scratch that holds, drops, and holds lower — the product's own event
+reduced to geometry. The two flats are bone-white `--scratch`; the drop is `--amber`, because this
+world reserves amber for a breach and the drop *is* the breach. Square caps, one stroke weight
+(2.6 on a 20-unit box), no fill, no radius, no container: the same instrument language as the drum's
+linework.
+
+It is a logotype, not a chart. The page's real data is drawn by `DrumRecord` from 295 actual rounds;
+the mark is the shape of that record at the size of a favicon, and it never stands in for a reading.
+
+Shipped as three files, all the same geometry:
+
+| File | Purpose |
+|---|---|
+| `components/Logo.tsx` | the mark in the page, drawn from the CSS variables so it follows the palette |
+| `app/icon.svg` | the favicon — literal hex, on a full-bleed soot square so it survives a light tab bar |
+| `app/apple-icon.tsx` | 180×180 PNG via `next/og`, because iOS will not render an SVG icon |
+
+The favicon keeps its soot ground rather than going transparent: a bone-white line alone would
+disappear against a light browser chrome, and the smoked sheet is the brand's material anyway.
+
+## The header plate
+
+`components/Nav.tsx`. A sticky ruled bar: the mark and wordmark on the left, section markings and
+the source link on the right, one hairline underneath. It is **opaque soot with no blur, no shadow
+and no radius** — a floating translucent pill is the category default, and this world already
+declared its single elevation on the drum.
+
+Section labels use the `.stationLabel` voice (0.6875rem, uppercase, 0.14em tracking) because they
+are instrument markings, not navigation chrome. Below 46rem they step aside and the bar keeps what
+a visitor needs on a phone: who this is, and the way to go verify it.
+
+`--scratch-faint` was rejected for "Creditcoin CC3": it is 3.21:1 on soot, which is fine for a tick
+label the eye skips and wrong for a word the visitor reads. It is `--scratch-dim` (5.07:1).
+
 ## Motion
 
 One authored moment: the trace lays itself down once, `stroke-dashoffset` over 2600ms on
@@ -108,7 +144,8 @@ underline offset and thickness, and tabular numerals.
 - No card is the page's structural unit; nested cards do not exist here.
 - No gradient text, no glass, no blur, no glow, no coloured left borders, no offset shadows.
 - No kicker or eyebrow above any heading.
-- Icons: none are used. Where a marker is needed the drum draws real geometry (a circle, a dashed
-  rule), never a unicode glyph.
+- Icons: authored SVG only, in the instrument's own stroke language — the mark, and the external-link
+  arrow in the nav. Never a unicode glyph or emoji standing in for one.
+- The header plate stays opaque. Sticky is allowed; glass is not.
 - Every figure on the page is real and carries its provenance beside it — chain key, block height,
   transaction index, gas. Nothing is illustrative.
