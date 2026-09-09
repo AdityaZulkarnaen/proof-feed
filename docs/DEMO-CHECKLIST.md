@@ -16,7 +16,7 @@ Every step reads a live chain. **Without wifi almost nothing in this demo works:
 | `cd contracts && forge test` | no — the only thing that runs offline |
 
 So: do not plan to record on the move. The one thing worth filming offline is `forge test`
-(130 tests, green, no network) — and even that needs `npm ci` to have run once before.
+(131 tests, green, no network) — and even that needs `npm ci` to have run once before.
 
 ## Before you hit record
 
@@ -131,4 +131,5 @@ Point at the three `TransactionVerified` logs from `0x…0FD2`.
 | Claim paid (PROPORTIONAL) | https://creditcoin-testnet.blockscout.com/tx/0x013188937ea2bede2fe7e41657bfe0a029b4cbd464dd2b11be049a0f9d701d52 |
 | Batch — 3 rounds, one proof | https://creditcoin-testnet.blockscout.com/tx/0x882c6ae14cb691ce9d1da231ea4d1733b09e5b986d833f17b529c4217ea33da2 |
 | Landing page | `cd web && npm run dev`, or your Vercel URL |
+| Project deck (PDF) | [`docs/ProofFeed-Deck.pdf`](ProofFeed-Deck.pdf) — or `/deck` on the deployed site |
 | Source depeg tx (Etherscan) | https://etherscan.io/tx/0x24500a30910fb1a99de3c13eacb4e4dd05334e4078615dcf276c58dcfbddacd8 |

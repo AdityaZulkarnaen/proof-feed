@@ -49,6 +49,15 @@ contract ProvenFeedRegistryTest is BaseTest {
         );
     }
 
+    /// T-R17: a zero feed id is not a feed. Branch coverage found this guard untested.
+    function test_RegisterFeed_RevertsOnZeroFeedId() public {
+        vm.prank(owner);
+        vm.expectRevert(abi.encodeWithSelector(IProvenFeedRegistry.UnknownFeed.selector, bytes32(0)));
+        registry.registerFeed(
+            bytes32(0), MAINNET_KEY, makeAddr("agg"), 1, USDC_DECIMALS, USDC_DESCRIPTION
+        );
+    }
+
     /// T-R03: mixing decimals across phases would silently corrupt every consumer's maths.
     function test_RegisterFeed_RevertsOnDecimalsMismatchAcrossPhases() public {
         address otherPhase = makeAddr("phase4Aggregator");
@@ -72,6 +81,12 @@ contract ProvenFeedRegistryTest is BaseTest {
         registry.registerFeed(USDC_FEED_ID, MAINNET_KEY, address(0), 9, USDC_DECIMALS, USDC_DESCRIPTION);
     }
 
+    /// @dev The constructor's own `if (initialOwner == address(0)) revert ZeroAddress()` is
+    ///      **unreachable**: `Ownable` runs first and rejects the zero owner before that body
+    ///      executes, which is why this expects OZ's error and not ours. Branch coverage proved the
+    ///      line dead. It stays in the deployed source on purpose — `bytecode_hash` is at its
+    ///      default, so editing it would change the bytecode and break the Blockscout verification
+    ///      the whole project rests on (README, Tests).
     function test_Constructor_RevertsOnZeroOwner() public {
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableInvalidOwner.selector, address(0)));
         new ProvenFeedRegistry(address(0));

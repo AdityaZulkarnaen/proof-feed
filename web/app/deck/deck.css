@@ -1,0 +1,372 @@
+/*
+ * The deck. Same smoked-drum world as the landing page, laid out as fixed 16:9 leaves so that one
+ * source produces both a page a judge can open and a PDF a submission form can take.
+ *
+ * Type is sized in container-query units against each leaf, so a slide occupies the same proportion
+ * of its frame whether that frame is a browser at 1400px or an A4 landscape sheet at 297mm. Nothing
+ * is positioned absolutely: every leaf is a flex column, which is what survives a print engine.
+ */
+
+.deck {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1.5rem 1rem 4rem;
+  background: #0a0806;
+}
+
+.leaf {
+  container-type: size;
+  position: relative;
+  width: min(100%, 1280px);
+  aspect-ratio: 16 / 9;
+  background: var(--soot);
+  border: var(--rule);
+  display: flex;
+  flex-direction: column;
+  padding: 5.2cqw 5.5cqw 4.4cqw;
+  overflow: hidden;
+}
+
+/* ── The leaf's own furniture ─────────────────────────────────────────────────────────────── */
+
+.leafHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2cqw;
+  padding-bottom: 1.4cqw;
+  border-bottom: var(--rule);
+  margin-bottom: 3.2cqw;
+}
+
+.leafMark,
+.leafNum {
+  font-family: var(--font-label), sans-serif;
+  font-size: 0.95cqw;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--scratch-faint);
+}
+
+.leafTitle {
+  font-family: var(--font-label), sans-serif;
+  font-size: 3.5cqw;
+  font-weight: 700;
+  line-height: 1.06;
+  letter-spacing: -0.025em;
+  color: var(--scratch);
+  margin: 0 0 2cqw;
+  max-width: 26ch;
+}
+
+.leafLede {
+  font-size: 1.38cqw;
+  line-height: 1.5;
+  color: var(--scratch-dim);
+  margin: 0 0 2.2cqw;
+  max-width: 66ch;
+}
+
+.leafLede strong {
+  color: var(--scratch);
+  font-weight: 600;
+}
+
+/* Content starts at the top and is sized to fit. Centring an overfull column made it bleed into
+   the lede above and the footer below — the leaf must never let a slide overlap its own furniture. */
+.leafBody {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 1.8cqw;
+  overflow: hidden;
+}
+
+.leafBody.centred {
+  justify-content: center;
+}
+
+.leafFoot {
+  margin-top: auto;
+  padding-top: 1.4cqw;
+  border-top: var(--rule);
+  font-family: var(--font-label), sans-serif;
+  font-size: 0.95cqw;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--scratch-faint);
+}
+
+/* A checksummed address is case-significant — uppercasing one produces an address that fails
+   EIP-55 validation. The footer's transform must never reach it. */
+.leafFoot .addr {
+  text-transform: none;
+  font-family: var(--font-mono), monospace;
+  letter-spacing: -0.01em;
+}
+
+/* ── Ruled rows, the same structural unit as the site: never a card ───────────────────────── */
+
+.deckRows {
+  border-top: var(--rule);
+}
+
+.deckRow {
+  display: grid;
+  grid-template-columns: 15cqw 1fr;
+  gap: 0.4cqw 2.4cqw;
+  align-items: baseline;
+  padding: 1.35cqw 0;
+  border-bottom: var(--rule);
+}
+
+.deckRowLabel {
+  font-family: var(--font-label), sans-serif;
+  font-size: 0.95cqw;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--scratch-dim);
+}
+
+.deckRowValue {
+  font-size: 1.42cqw;
+  line-height: 1.42;
+  color: var(--scratch);
+}
+
+.deckRowValue .sub {
+  display: block;
+  font-size: 1.15cqw;
+  color: var(--scratch-dim);
+  margin-top: 0.35cqw;
+}
+
+.deckHash {
+  font-family: var(--font-mono), monospace;
+  font-size: 1.1cqw;
+  letter-spacing: -0.01em;
+  color: var(--scratch-dim);
+  word-break: break-all;
+}
+
+/* ── The one big figure a leaf may carry ──────────────────────────────────────────────────── */
+
+.deckReading {
+  font-family: var(--font-label), sans-serif;
+  font-size: 7.2cqw;
+  font-weight: 700;
+  line-height: 0.94;
+  letter-spacing: -0.035em;
+  font-variant-numeric: tabular-nums;
+  color: var(--scratch);
+}
+
+.deckReading.breach {
+  color: var(--amber);
+}
+
+.deckCols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3.4cqw;
+}
+
+.deckCols.three {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.deckColTitle {
+  font-family: var(--font-label), sans-serif;
+  font-size: 1.15cqw;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--scratch-dim);
+  padding-bottom: 0.9cqw;
+  border-bottom: var(--rule);
+  margin-bottom: 1.4cqw;
+}
+
+.deckList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 1.15cqw;
+}
+
+.deckList li {
+  font-size: 1.28cqw;
+  line-height: 1.42;
+  color: var(--scratch-dim);
+  padding-left: 1.6cqw;
+  position: relative;
+}
+
+.deckList li strong {
+  color: var(--scratch);
+  font-weight: 600;
+}
+
+/* A hairline tick, drawn — not a bullet glyph borrowed from the font. */
+.deckList li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.62cqw;
+  width: 0.75cqw;
+  height: 1px;
+  background: var(--grid-strong);
+}
+
+.deckList.amber li::before {
+  background: var(--amber-dim);
+}
+
+/* ── Measurement table ────────────────────────────────────────────────────────────────────── */
+
+.deckTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.deckTable th {
+  font-family: var(--font-label), sans-serif;
+  font-size: 0.95cqw;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--scratch-faint);
+  text-align: right;
+  padding: 0 1.6cqw 1cqw 0;
+  border-bottom: var(--rule);
+}
+
+.deckTable td {
+  font-size: 1.28cqw;
+  color: var(--scratch-dim);
+  text-align: right;
+  padding: 0.85cqw 1.6cqw 0.85cqw 0;
+  border-bottom: var(--rule);
+}
+
+.deckTable th:first-child,
+.deckTable td:first-child {
+  text-align: left;
+  color: var(--scratch);
+}
+
+.deckTable th:last-child,
+.deckTable td:last-child {
+  padding-right: 0;
+}
+
+.deckTable .better {
+  color: var(--amber);
+}
+
+/* ── Cover ────────────────────────────────────────────────────────────────────────────────── */
+
+.cover {
+  justify-content: center;
+  gap: 0;
+}
+
+.coverMark {
+  display: flex;
+  align-items: center;
+  gap: 1.6cqw;
+  margin-bottom: 4cqw;
+}
+
+.coverName {
+  font-family: var(--font-label), sans-serif;
+  font-size: 2.1cqw;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--scratch);
+}
+
+.coverTitle {
+  font-family: var(--font-label), sans-serif;
+  font-size: 6.4cqw;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.035em;
+  color: var(--scratch);
+  margin: 0 0 2.6cqw;
+  max-width: 17ch;
+}
+
+.coverSub {
+  font-size: 1.6cqw;
+  line-height: 1.5;
+  color: var(--scratch-dim);
+  max-width: 58ch;
+  margin: 0;
+}
+
+.coverMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9cqw 2.6cqw;
+  margin-top: 4cqw;
+  padding-top: 1.6cqw;
+  border-top: var(--rule);
+  font-family: var(--font-label), sans-serif;
+  font-size: 1cqw;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--scratch-faint);
+}
+
+/* ── Print: one leaf per sheet, colours kept ──────────────────────────────────────────────── */
+
+@page {
+  size: 297mm 167mm;
+  margin: 0;
+}
+
+@media print {
+  .deck {
+    display: block;
+    padding: 0;
+    gap: 0;
+    background: var(--soot);
+  }
+
+  .leaf {
+    width: 297mm;
+    height: 167mm;
+    aspect-ratio: auto;
+    border: 0;
+    break-after: page;
+    break-inside: avoid;
+  }
+
+  .leaf:last-child {
+    break-after: auto;
+  }
+
+  /* A smoked record printed on white paper is not this document. */
+  html,
+  body,
+  .deck,
+  .leaf {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .deckNav {
+    display: none;
+  }
+}

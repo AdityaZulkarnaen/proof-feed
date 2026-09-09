@@ -80,6 +80,28 @@ Badges: Live on CC3 testnet · Blockscout registry · Blockscout PegGuard · Dem
 - Links: GitHub, video, Blockscout registry, Blockscout claim tx, optional web page.
 - Description: paste README sections 1–5 (DoraHacks renders markdown).
 
+### Project Deck / Whitepaper (PDF URL)
+
+The form wants a URL that resolves to a PDF. There are two, and either satisfies it:
+
+| Option | URL | Notes |
+|---|---|---|
+| **Hosted route** | `https://<your-vercel-domain>/deck` | Nine 16:9 leaves, same source as the PDF. Renders in any browser and prints correctly with Ctrl/Cmd-P. |
+| **The PDF itself** | `https://github.com/AdityaZulkarnaen/proof-feed/raw/main/docs/ProofFeed-Deck.pdf` | Committed at `docs/ProofFeed-Deck.pdf` (nine pages, 297×167 mm). GitHub's `/raw/` link serves it as a file, which is what a form expecting a PDF URL wants. |
+
+Prefer the GitHub raw link if the field is validated as a PDF; give the `/deck` URL anywhere a page
+is acceptable. **The repository must be public before either link resolves for a judge.**
+
+Regenerate after any change to the deck or the deployment constants:
+
+```bash
+cd web && npm run build && npm run deck     # writes docs/ProofFeed-Deck.pdf
+```
+
+Contents, one claim per leaf: cover · the problem · a Chainlink round is an Ethereum transaction ·
+the seven checks · the 2023 depeg with its hashes · PegGuard's two payout modes · both precompile
+surfaces and the batch gas measured in both directions · what it does not do · status and links.
+
 ## 4. Judge checklist (what we expect them to verify in 5 minutes)
 1. Open the `recordRound` tx on Blockscout → see `TransactionVerified` from `0x…0FD2` and `RoundProven`.
 2. Open Etherscan for the same mainnet tx → same `answer`/`roundId`/`updatedAt`.

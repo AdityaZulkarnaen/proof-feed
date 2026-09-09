@@ -20,6 +20,9 @@ All source-verified on Blockscout. Every hash below is real; full log in [`docs/
 
 ---
 
+**Project deck:** [`docs/ProofFeed-Deck.pdf`](docs/ProofFeed-Deck.pdf) — nine pages, or read it as a
+page at `/deck` on the deployed site. Regenerate with `cd web && npm run build && npm run deck`.
+
 ## The problem
 
 Creditcoin has no trust-minimised external price data. The oracle that ships in
@@ -205,7 +208,7 @@ this unmodified — there is a test that does exactly that with its own locally-
 
 ```bash
 git clone https://github.com/AdityaZulkarnaen/proof-feed.git && cd proof-feed
-npm ci && (cd contracts && forge test)          # 130 tests, zero network access
+npm ci && (cd contracts && forge test)          # 131 tests, zero network access
 npm run pf -- demo --yes                        # read the live deployment back off CC3
 ```
 
@@ -230,7 +233,7 @@ Run on a clean `git clone` into an empty directory, with no `.env`:
 | Step | Result |
 |---|---|
 | `npm ci` | 50 packages, clean |
-| `forge test` | **130 passed, 0 failed** — Foundry auto-fetches the pinned `forge-std` v1.16.2 submodule on first run (needs network once; or clone with `--recurse-submodules`) |
+| `forge test` | **131 passed, 0 failed** — Foundry auto-fetches the pinned `forge-std` v1.16.2 submodule on first run (needs network once; or clone with `--recurse-submodules`) |
 | `npm run typecheck` | clean |
 | `npm run test:cli` | **25 passed** |
 | `npm run pf -- spike` | G1, G2, G3a, G3b all **PASS** with no `.env` |
@@ -347,7 +350,7 @@ twice, and cannot re-prove one the single-proof path already consumed — both d
 ## Tests
 
 ```
-contracts: 130 tests, 8 suites — forge test          (no network access)
+contracts: 131 tests, 8 suites — forge test          (no network access)
 cli:        25 tests                                  — npm run test:cli
 coverage:   99.0% of lines on src/ (308/311), excluding the Day-1 spike contract
 ```
@@ -363,12 +366,24 @@ Re-measured on the P2 tree with
 | `PegGuard` | 98.04% (150/153) | 91.43% (32/35) |
 | `ProbeASC` | 0% — Day-1 spike only, deliberately not in the demo path or the suite |
 
-Every line of the registry is covered, batch entrypoint included. Its **branch** figure fell from
-72.73% to 65.52% when FR-32 landed, and that is not noise: `recordRoundBatch`'s argument guards
-add short-circuiting conditions the suite only enters from one side — `BatchLengthMismatch` is
-reached through a wrong `encodedTransactions.length`, never through a wrong `merkleProofs.length`.
-Reported rather than smoothed over; the uncovered arms are argument-shape guards, not proof or
-payout logic.
+Every line of the registry is covered, batch entrypoint included. The **branch** figure needs
+reading rather than reporting, so here is what the ten uncovered arms actually are, from the lcov
+report: eight of them are the two `require` statements in `recordRound` and the two in
+`recordRoundBatch`. Those are tested — replay and a false verdict, in both entrypoints, in four
+tests — but `forge coverage` does not mark `require` arms the way it marks `if` arms, so they are
+counted as missed regardless.
+
+The other two were real, and reading the report is what found them. One was an untested zero-`feedId`
+guard in `registerFeed` — now covered. The other is a zero-address check in the constructor that is
+**unreachable**: `Ownable` runs first and rejects the zero owner before that body executes, which is
+why the existing test expects `OwnableInvalidOwner` and not our own error.
+
+That dead line is still in the deployed source, deliberately. `foundry.toml` leaves `bytecode_hash`
+at its default, so the compiler embeds a metadata hash over the source text — editing even a comment
+changes the bytecode, and the repository would stop reproducing what Blockscout has verified.
+Redeploying the whole stack to delete one unreachable statement would invalidate every transaction
+hash in this README for no security gain. It is recorded here instead, and goes with the next
+deployment that has an actual reason to exist.
 
 - The happy paths decode **real Ethereum mainnet bytes**: two proofs captured by `pf capture` and
   committed as fixtures, including the 2023 depeg transaction. Only the precompile's *verdict* is

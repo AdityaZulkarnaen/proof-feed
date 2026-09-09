@@ -202,7 +202,7 @@ Gas estimation via `eth_estimateGas` **worked on every call** — the documented
 
 ```bash
 npm ci
-cd contracts && forge test            # 130 tests, no network access
+cd contracts && forge test            # 131 tests, no network access
 cd .. && npm run test:cli             # 25 tests
 npm run pf -- spike                   # re-runs every Day-1 gate against the live network
 npm run pf -- prove --feed USDC/USD --latest

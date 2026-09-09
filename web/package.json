@@ -7,7 +7,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "deck": "node scripts/render-deck.mjs"
   },
   "dependencies": {
     "ethers": "^6.17.0",
@@ -21,5 +22,7 @@
     "@types/react-dom": "^19.0.0",
     "typescript": "^5.6.3"
   },
-  "engines": { "node": ">=20.9" }
+  "engines": {
+    "node": ">=20.9"
+  }
 }

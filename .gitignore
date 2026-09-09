@@ -19,3 +19,4 @@ web/tsconfig.tsbuildinfo
 # pick a dependency tree nobody built against.
 pnpm-lock.yaml
 yarn.lock
+contracts/lcov.info
