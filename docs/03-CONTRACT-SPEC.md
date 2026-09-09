@@ -303,16 +303,42 @@ Storage: `IProvenFeedRegistry public immutable registry; mapping(bytes32 => Pool
   actual payout, with `released = notional − payout`.
 - The prover bounty is unscaled: the prover did the same work either way.
 
+### 5.4c P2 additions — strike bound (FR-33), shipped 2026-09-09
+The premium is `notional × bps × days` and carries no term for how far the strike sits from the
+market, so an unbounded pool sells cover that is already in the money for a rounding error. This is
+an **underwriting** bound: it constrains what may be sold, never how a proven round settles what was
+already sold.
+
+- `Pool.maxStrikeBps` (uint16) and `Pool.maxReferenceAge` (uint24), set by
+  `configureStrikeBounds(feedId, maxStrikeBps, maxReferenceAge)` — `onlyOwner`, reverts
+  `UnknownFeed` for an unregistered feed and `InvalidStrikeBounds(bps)` for anything above
+  `DEFAULT_MAX_STRIKE_BPS` that is not the sentinel. Emits `PoolStrikeBoundsConfigured`.
+- Zero means the contract default: `DEFAULT_MAX_STRIKE_BPS = 10_000` (a strike may sit **at** the
+  latest proven answer, never above it) and `DEFAULT_MAX_REFERENCE_AGE = 1 days` (the slowest
+  heartbeat among the feeds in scope — see docs/05, measured).
+- `UNBOUNDED_STRIKE = type(uint16).max` turns the ceiling off entirely. Demo staging only: such a
+  pool will sell in-the-money cover and needs no reference price at all.
+- `strikeCap(feedId) view returns (int256)` — the ceiling, or `type(int256).max` when unbounded.
+  Reverts `NoReferencePrice(feedId)` when no round has ever been proven (or the latest answer is
+  ≤ 0) and `ReferencePriceStale(updatedAt, maxAge)` when the latest proven round is too old, so a
+  front-end learns *why* a purchase is impossible.
+- `_buyCover` checks `strike ≤ strikeCap(feedId)` else `StrikeTooHigh(strike, cap)`, immediately
+  after `strike > 0` and before any money moves.
+- `claim`, `proveAndClaim` and `expire` are untouched: INV-08 still says only the proven round
+  decides a policy, and tightening the bound afterwards cannot deny one.
+
 ### 5.5 Events / errors (complete list)
-Events: `PoolConfigured, PoolBountyConfigured, PoolProportionalConfigured, Deposited, Withdrawn,
+Events: `PoolConfigured, PoolBountyConfigured, PoolProportionalConfigured, PoolStrikeBoundsConfigured, Deposited, Withdrawn,
 CoverBought, ClaimPaid, PolicyExpired, BountyAccrued, BountyWithdrawn, BountyReleased`.
-Errors: `UnknownFeed, PoolInactive, InvalidStrike, InvalidNotional, InvalidDuration, InsufficientCapacity(uint256 available, uint256 requested), InsufficientLiquidity(uint256 available, uint256 requested), WrongPremium(uint256 expected, uint256 sent), PolicyNotActive(uint256 id), RoundNotProven(bytes32, uint80), RoundOutsideWindow(uint64,uint64,uint64), StrikeNotBreached(int256,int256), RoundNotInProof(uint80), NotExpired, TransferFailed, ZeroAmount, NothingOwed(address), InvalidBountyShare(uint16), PoolWipedOut(bytes32), UnknownPolicy(uint256), ZeroAddress, ProportionalCoverUnavailable(bytes32), PayoutTooSmall(int256,int256)`.
+Errors: `UnknownFeed, PoolInactive, InvalidStrike, InvalidNotional, InvalidDuration, InsufficientCapacity(uint256 available, uint256 requested), InsufficientLiquidity(uint256 available, uint256 requested), WrongPremium(uint256 expected, uint256 sent), PolicyNotActive(uint256 id), RoundNotProven(bytes32, uint80), RoundOutsideWindow(uint64,uint64,uint64), StrikeNotBreached(int256,int256), RoundNotInProof(uint80), NotExpired, TransferFailed, ZeroAmount, NothingOwed(address), InvalidBountyShare(uint16), PoolWipedOut(bytes32), UnknownPolicy(uint256), ZeroAddress, ProportionalCoverUnavailable(bytes32), PayoutTooSmall(int256,int256), StrikeTooHigh(int256 strike, int256 cap), NoReferencePrice(bytes32), ReferencePriceStale(uint64 updatedAt, uint64 maxAge), InvalidStrikeBounds(uint16)`.
 
 ### 5.6 Notes
 - Strike is in feed decimals (USDC/USD: 8 decimals → `0.97 USD = 97_000_000`).
 - Payout mode is chosen per policy (§5.4b). `FULL` is the default and the four-argument `buyCover`.
   Proportional is priced separately because it pays less (D-13).
 - Premium accrues to the pool at purchase (no refunds). Simplicity over fairness; say so in README.
+- Premium does **not** vary with moneyness. That is why the strike ceiling of §5.4c exists: pricing
+  and underwriting each have to do half the job, and only one of them was doing it.
 
 ---
 
@@ -342,5 +368,12 @@ Reads env: `OWNER`, `FEED_DESCRIPTION` (e.g. "USDC / USD"), `FEED_CHAIN_KEY` (3)
 Steps: deploy `ProvenFeedRegistry(owner)` → `registerFeed(keccak256(bytes(FEED_DESCRIPTION)), …)` →
 deploy `ProvenFeedAdapter(registry, feedId)` → deploy `PegGuard(registry, owner)` → `configurePool(...)`.
 Print all addresses as JSON to stdout and append to `docs/DEPLOYMENT.md`.
-Run: `forge script script/Deploy.s.sol --rpc-url $CREDITCOIN_RPC_URL --private-key $CREDITCOIN_WALLET_PRIVATE_KEY --broadcast` (add `--legacy` if EIP-1559 fields are rejected by the node `[VERIFY]`).
+Run: `forge script script/Deploy.s.sol --rpc-url $CREDITCOIN_RPC_URL --private-key $CREDITCOIN_WALLET_PRIVATE_KEY --broadcast`.
+**[VERIFIED 2026-09-09 — and it does not work on CC3.]** `forge script` fails before the script body
+runs: the node's `eth_getBlockByNumber` omits `mixHash`, so Foundry's block deserializer raises
+`` `prevrandao` not set ``. `--legacy` does not help, because the failure is in building the
+execution environment rather than in the transaction, and EIP-1559 fields were never the problem —
+the CC3 transactions this project sent through ethers are ordinary type-2 transactions, spot-checked
+on chain: `cast tx 0xcca535ff… type` and `cast tx 0xa6c5ffa8… type` both return `0x2`.
+The working path is `npm run pf -- deploy` (docs/DEPLOYMENT.md, known issue 1; docs/09 Q5).
 Verify: `forge verify-contract --verifier blockscout --verifier-url https://creditcoin-testnet.blockscout.com/api <addr> <Contract>`.

@@ -43,6 +43,24 @@ contract PegGuard is Ownable2Step, ReentrancyGuard {
         PROPORTIONAL
     }
 
+    /// @notice Default strike ceiling: a policy may be written at most *at* the latest proven
+    ///         answer, never above it (FR-33). Applies to any pool that has not set its own.
+    /// @dev Expressed in basis points of that answer. 10_000 = 100% of it.
+    uint16 public constant DEFAULT_MAX_STRIKE_BPS = 10_000;
+
+    /// @notice Default freshness requirement for the reference round (FR-33).
+    /// @dev 24h matches the slowest heartbeat among the feeds this product is written against, so a
+    ///      pool backed by a running keeper never notices it, and a pool whose keeper died stops
+    ///      selling cover instead of selling it against a price nobody has refreshed.
+    uint24 public constant DEFAULT_MAX_REFERENCE_AGE = 1 days;
+
+    /// @notice Sentinel for `Pool.maxStrikeBps` that turns the strike ceiling off completely.
+    /// @dev **Demo-only.** A pool set to this will sell cover that is already in the money, which
+    ///      is a gift of the notional minus the premium to the first buyer. It exists so a breach
+    ///      can be staged on testnet without waiting for a real depeg; see docs/DEMO-CHECKLIST.md.
+    ///      An unbounded pool announces itself on chain through `PoolStrikeBoundsConfigured`.
+    uint16 public constant UNBOUNDED_STRIKE = type(uint16).max;
+
     /// @param balance Total native CTC held for this feed's pool (deposits + premiums − payouts).
     /// @param locked Portion of `balance` reserved against live policies.
     /// @param totalShares LP share supply.
@@ -55,6 +73,11 @@ contract PegGuard is Ownable2Step, ReentrancyGuard {
     ///        added on top, so a buyer's cost is unchanged by the incentive.
     /// @param proportionalBpsPer30d Rate for `PayoutMode.PROPORTIONAL` cover (FR-30). Zero means
     ///        this pool does not write proportional cover at all.
+    /// @param maxStrikeBps Highest strike this pool will write, in basis points of the latest
+    ///        proven answer (FR-33). Zero means the safe default `DEFAULT_MAX_STRIKE_BPS`;
+    ///        `UNBOUNDED_STRIKE` disables the check entirely and is demo-only.
+    /// @param maxReferenceAge Seconds a reference round may be old before this pool stops writing
+    ///        new cover (FR-33). Zero means the default `DEFAULT_MAX_REFERENCE_AGE`.
     struct Pool {
         uint256 balance;
         uint256 locked;
@@ -65,6 +88,8 @@ contract PegGuard is Ownable2Step, ReentrancyGuard {
         bool active;
         uint16 proverBountyBps;
         uint16 proportionalBpsPer30d;
+        uint16 maxStrikeBps;
+        uint24 maxReferenceAge;
     }
 
     /// @param feedId The ProofFeed feed this policy is written against.
@@ -116,6 +141,10 @@ contract PegGuard is Ownable2Step, ReentrancyGuard {
     event PoolBountyConfigured(bytes32 indexed feedId, uint16 proverBountyBps);
     /// @notice The pool's proportional-cover rate changed (FR-30). Zero disables the mode.
     event PoolProportionalConfigured(bytes32 indexed feedId, uint16 proportionalBpsPer30d);
+    /// @notice The pool's strike ceiling and reference-freshness bound changed (FR-33).
+    /// @dev `maxStrikeBps == UNBOUNDED_STRIKE` means the ceiling is off — deliberately loud, so an
+    ///      unbounded pool is visible to anyone reading the log rather than only to its owner.
+    event PoolStrikeBoundsConfigured(bytes32 indexed feedId, uint16 maxStrikeBps, uint24 maxReferenceAge);
     event Deposited(bytes32 indexed feedId, address indexed lp, uint256 amount, uint256 shares);
     event Withdrawn(bytes32 indexed feedId, address indexed lp, uint256 amount, uint256 shares);
     event CoverBought(
@@ -190,6 +219,14 @@ contract PegGuard is Ownable2Step, ReentrancyGuard {
     error PayoutTooSmall(int256 answer, int256 strike);
     /// @notice Every unit of this pool was paid out; the shares still outstanding are worthless.
     error PoolWipedOut(bytes32 feedId);
+    /// @notice The strike is above what this pool will write against the latest proven price (FR-33).
+    error StrikeTooHigh(int256 strike, int256 cap);
+    /// @notice No round has been proven for this feed, so there is no price to bound a strike against.
+    error NoReferencePrice(bytes32 feedId);
+    /// @notice The latest proven round is too old to price new cover against (FR-33).
+    error ReferencePriceStale(uint64 updatedAt, uint64 maxAge);
+    /// @notice A strike ceiling above 100% of the reference price would be no ceiling at all.
+    error InvalidStrikeBounds(uint16 maxStrikeBps);
     /// @notice No such policy id.
     error UnknownPolicy(uint256 id);
     /// @notice The registry address was zero.
@@ -229,6 +266,33 @@ contract PegGuard is Ownable2Step, ReentrancyGuard {
         emit PoolConfigured(feedId, premiumBpsPer30d, waitingPeriod, maxNotional, active);
         emit PoolBountyConfigured(feedId, proverBountyBps);
         emit PoolProportionalConfigured(feedId, proportionalBpsPer30d);
+    }
+
+    /// @notice Set how far below the latest proven price a strike must sit, and how fresh that
+    ///         price must be (FR-33).
+    /// @dev Underwriting bound, not a claim decision: it constrains what may be *sold*, and has no
+    ///      effect on any policy already written or on how a proven round settles one. The owner
+    ///      still cannot approve, deny or price a claim.
+    /// @param feedId The pool to bound.
+    /// @param maxStrikeBps Ceiling in basis points of the latest proven answer. Zero restores the
+    ///        default (`DEFAULT_MAX_STRIKE_BPS`); `UNBOUNDED_STRIKE` turns the ceiling off, which is
+    ///        demo-only and is the one setting that lets a buyer purchase cover already in the money.
+    /// @param maxReferenceAge How old the reference round may be, in seconds. Zero restores
+    ///        `DEFAULT_MAX_REFERENCE_AGE`.
+    function configureStrikeBounds(bytes32 feedId, uint16 maxStrikeBps, uint24 maxReferenceAge)
+        external
+        onlyOwner
+    {
+        if (REGISTRY.getFeed(feedId).emitter == address(0)) revert UnknownFeed(feedId);
+        // Anything between "at the money" and the sentinel would be a ceiling that permits buying
+        // in the money — a half-measure with no honest use. Say "off" out loud or stay under 100%.
+        if (maxStrikeBps > DEFAULT_MAX_STRIKE_BPS && maxStrikeBps != UNBOUNDED_STRIKE) {
+            revert InvalidStrikeBounds(maxStrikeBps);
+        }
+        Pool storage p = _pools[feedId];
+        p.maxStrikeBps = maxStrikeBps;
+        p.maxReferenceAge = maxReferenceAge;
+        emit PoolStrikeBoundsConfigured(feedId, maxStrikeBps, maxReferenceAge);
     }
 
     // ── Liquidity ────────────────────────────────────────────────────────────────────────────────
@@ -346,6 +410,33 @@ contract PegGuard is Ownable2Step, ReentrancyGuard {
         return (uint256(notional) * uint256(strike - answer)) / uint256(strike);
     }
 
+    /// @notice The highest strike this pool will currently write (FR-33).
+    /// @dev Reverts for the same reasons `buyCover` would, so a front-end can call it to find out
+    ///      *why* a purchase is impossible rather than only that it is. Returns `type(int256).max`
+    ///      for a pool whose ceiling is off.
+    /// @param feedId The pool to quote a ceiling for.
+    /// @return cap The largest acceptable `strike`, in the feed's decimals.
+    function strikeCap(bytes32 feedId) public view returns (int256 cap) {
+        Pool storage p = _pools[feedId];
+        uint16 bps = p.maxStrikeBps;
+        if (bps == UNBOUNDED_STRIKE) return type(int256).max;
+        if (bps == 0) bps = DEFAULT_MAX_STRIKE_BPS;
+
+        // The reference is a proven round and nothing else. Reading it here is the same read a
+        // claim does — no price enters this contract by any other door (INV-01).
+        uint80 latest = REGISTRY.latestRoundId(feedId);
+        if (latest == 0) revert NoReferencePrice(feedId);
+        IProvenFeedRegistry.Round memory r = REGISTRY.getRound(feedId, latest);
+        if (r.answer <= 0) revert NoReferencePrice(feedId);
+
+        uint64 maxAge = p.maxReferenceAge == 0 ? DEFAULT_MAX_REFERENCE_AGE : p.maxReferenceAge;
+        // `updatedAt` is Chainlink's mainnet timestamp; both clocks are UTC seconds, and a round
+        // proven from the future is not a thing a proof can produce.
+        if (block.timestamp > uint256(r.updatedAt) + maxAge) revert ReferencePriceStale(r.updatedAt, maxAge);
+
+        return (r.answer * int256(uint256(bps))) / int256(uint256(DEFAULT_MAX_STRIKE_BPS));
+    }
+
     /// @notice Buy cover. Pays `notional` if the feed prints below `strike` inside the window.
     /// @param feedId The feed to cover.
     /// @param strike Trigger price in feed decimals (e.g. $0.97 on an 8-decimal feed = 97_000_000).
@@ -392,6 +483,13 @@ contract PegGuard is Ownable2Step, ReentrancyGuard {
         Pool storage p = _pools[feedId];
         if (!p.active) revert PoolInactive(feedId);
         if (strike <= 0) revert InvalidStrike(strike);
+
+        // FR-33. Premium is a function of notional and duration only, so without this a buyer
+        // could name a strike above the market, pay 0.05 CTC and collect 50 on the next round.
+        // The ceiling is read from the latest *proven* answer, which is the only price this
+        // contract can see, and it must be fresh enough to mean something.
+        int256 cap = strikeCap(feedId);
+        if (strike > cap) revert StrikeTooHigh(strike, cap);
         if (notional == 0 || notional > p.maxNotional) revert InvalidNotional(notional, p.maxNotional);
 
         uint256 freeLiquidity = p.balance - p.locked;

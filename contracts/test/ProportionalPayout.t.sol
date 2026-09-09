@@ -35,6 +35,13 @@ contract ProportionalPayoutTest is BaseTest {
             USDC_FEED_ID, PREMIUM_BPS_30D, 0, MAX_NOTIONAL, true, BOUNTY_BPS, PROPORTIONAL_BPS_30D
         );
 
+        // FR-33: these suites are about the money paths, not the underwriting bound, and most of
+        // them buy cover before any round exists to price a strike against. The ceiling is turned
+        // off here on purpose; `StrikeGuard.t.sol` is where the default behaviour is tested.
+        uint16 unbounded = guard.UNBOUNDED_STRIKE();
+        vm.prank(owner);
+        guard.configureStrikeBounds(USDC_FEED_ID, unbounded, 0);
+
         vm.deal(lp, 1000 ether);
         vm.deal(holder, 1000 ether);
         vm.deal(keeper, 10 ether);

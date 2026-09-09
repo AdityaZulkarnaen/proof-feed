@@ -37,6 +37,9 @@ contract Deploy is Script {
         uint16 bountyBps = uint16(vm.envOr("POOL_PROVER_BOUNTY_BPS", uint256(2000)));
         // FR-30: proportional cover pays less than full cover, so it is written at a lower rate.
         uint16 proportionalBps = uint16(vm.envOr("POOL_PROPORTIONAL_BPS_30D", uint256(30)));
+        /// FR-33: 0 selects PegGuard's own safe defaults (at-the-money ceiling, 24h reference).
+        uint16 maxStrikeBps = uint16(vm.envOr("POOL_MAX_STRIKE_BPS", uint256(0)));
+        uint24 maxReferenceAge = uint24(vm.envOr("POOL_MAX_REFERENCE_AGE", uint256(0)));
 
         bytes32 feedId = keccak256(bytes(feedDescription));
 
@@ -55,6 +58,11 @@ contract Deploy is Script {
         pegGuard.configurePool(
             feedId, premiumBps, waitingPeriod, maxNotional, true, bountyBps, proportionalBps
         );
+        // FR-33. Zeros select the contract's safe defaults: a strike may sit at the latest proven
+        // answer but never above it, against a reference no older than 24h. Set
+        // PEGGUARD_MAX_STRIKE_BPS=65535 only to stage a breach on testnet — that sells cover which
+        // is already in the money, and the event it emits says so on chain.
+        pegGuard.configureStrikeBounds(feedId, maxStrikeBps, maxReferenceAge);
 
         vm.stopBroadcast();
 

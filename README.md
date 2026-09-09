@@ -10,6 +10,10 @@ and parametric depeg cover that pays by proof, not by permission.**
 
 Live on **Creditcoin CC3 testnet** · BUIDL CTC 2026 Fall · track: **DeFi**
 
+[![CI](https://github.com/AdityaZulkarnaen/proof-feed/actions/workflows/ci.yml/badge.svg)](https://github.com/AdityaZulkarnaen/proof-feed/actions/workflows/ci.yml)
+The badge covers the whole suite: contracts, CLI, and a high-severity Solidity lint gate. Nothing in
+CI touches a chain, so it is green or red on the code alone.
+
 | | |
 |---|---|
 | `ProvenFeedRegistry` | [`0x086Ae43C078122A419887a2D73a6d8e7Be3679Ed`](https://creditcoin-testnet.blockscout.com/address/0x086Ae43C078122A419887a2D73a6d8e7Be3679Ed) |
@@ -17,6 +21,13 @@ Live on **Creditcoin CC3 testnet** · BUIDL CTC 2026 Fall · track: **DeFi**
 | `PegGuard` | [`0x7Ae5B58c75Fe194F72d1d8a8527688339D013a6e`](https://creditcoin-testnet.blockscout.com/address/0x7Ae5B58c75Fe194F72d1d8a8527688339D013a6e) |
 
 All source-verified on Blockscout. Every hash below is real; full log in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
+
+> **One deliberate exception, stated up front.** `PegGuard` in this repository is one change ahead of
+> the address above: the strike bound (FR-33) was added after that deployment. The registry and the
+> adapter are unchanged and still reproduce their verified bytecode exactly. Redeploying PegGuard is
+> tracked in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) §"Pending redeploy"; until it lands, the live
+> PegGuard is the version whose transactions are linked below, and the strike bound exists in source
+> and in 16 tests but not yet on chain.
 
 ---
 
@@ -327,10 +338,29 @@ twice, and cannot re-prove one the single-proof path already consumed — both d
 - **PegGuard is immune to that specific limitation**, which is the point of pairing them: the policy
   pays if *any* round in the window breached the strike. Existence is exactly what a transaction
   proof establishes.
+- **Premium does not vary with how far the strike sits from the market — so the pool bounds the
+  strike instead.** `notional × bps × days` has no moneyness term, which means an unbounded pool
+  would sell cover that is *already* in the money for a rounding error: name a strike above spot,
+  pay 0.058 CTC, collect 50 CTC on the next round. Since FR-33 a pool refuses it: a strike may sit
+  at most **at the latest proven answer** (tighter if the pool says so), and that answer must be no
+  older than 24 h, or new cover simply stops being written. It binds selling only — an existing
+  policy is still decided by the proven round alone, and tightening the bound afterwards cannot deny
+  a claim. The honest residue: proper risk pricing is a curve, and this is a wall. A wall is what
+  fits in a hackathon; the wall is at least in the right place.
+- **The demo pool turns that wall off, out loud.** Staging a breach on testnet means buying cover
+  that will pay, so the demo pool is configured `UNBOUNDED_STRIKE` — which emits
+  `PoolStrikeBoundsConfigured` on chain, is never the default, and is the one setting no pool
+  holding real value should ever have.
+- **A pool paid down to exactly zero cannot accept deposits until its worthless shares are burned.**
+  `PoolWipedOut` is the guard that stopped this from being a `panic 0x12`, and recovery needs every
+  remaining LP to call `withdraw` (which pays them 0). One absent LP leaves that pool permanently
+  closed to new liquidity. Nothing is lost and no other pool is affected, but it is a dead end
+  reachable without any attacker.
 - **You cannot buy cover for a depeg that already printed.** `buyCover` sets `start =
   block.timestamp + waitingPeriod`, so cover always begins in the future. This is a deliberate
-  safety property, and it is why the claim demo uses a live ETH/USD round with a strike set above
-  spot rather than the 2023 depeg round: the contract path is identical, only the strike differs.
+  safety property, and it is why the claim demo uses a live ETH/USD round rather than the 2023 depeg
+  round: the contract path is identical, only the strike differs. That demo strike sits *above* spot,
+  which since FR-33 only an `UNBOUNDED_STRIKE` pool will write — see the two bullets above.
 - **One-directional.** Creditcoin reads Ethereum. Writability is not available on testnet, and
   nothing here depends on sending a message back.
 - **Feed registration is owner-managed** (`Ownable2Step`) — a centralisation point of
@@ -350,33 +380,42 @@ twice, and cannot re-prove one the single-proof path already consumed — both d
 ## Tests
 
 ```
-contracts: 131 tests, 8 suites — forge test          (no network access)
+contracts: 147 tests, 9 suites — forge test          (no network access)
 cli:        25 tests                                  — npm run test:cli
-coverage:   99.0% of lines on src/ (308/311), excluding the Day-1 spike contract
+lint:       forge lint src, gated on high severity   — npm run lint
+coverage:   99.1% of lines on src/ (330/333), excluding the Day-1 spike contract
 ```
 
-Re-measured on the P2 tree with
+Re-measured on the FR-33 tree with
 `forge coverage --ir-minimum --no-match-coverage "(test|script)" --report summary`:
 
 | Contract | Lines | Branches |
 |---|---|---|
-| `ProvenFeedRegistry` | 100.00% (122/122) | 65.52% (19/29) |
+| `ProvenFeedRegistry` | 100.00% (122/122) | 68.97% (20/29) |
 | `ProvenFeedAdapter` | 100.00% (23/23) | 100.00% (4/4) |
 | `ChainlinkLogLib` | 100.00% (13/13) | 100.00% (2/2) |
-| `PegGuard` | 98.04% (150/153) | 91.43% (32/35) |
+| `PegGuard` | 98.29% (172/175) | 93.02% (40/43) |
 | `ProbeASC` | 0% — Day-1 spike only, deliberately not in the demo path or the suite |
 
 Every line of the registry is covered, batch entrypoint included. The **branch** figure needs
-reading rather than reporting, so here is what the ten uncovered arms actually are, from the lcov
-report: eight of them are the two `require` statements in `recordRound` and the two in
-`recordRoundBatch`. Those are tested — replay and a false verdict, in both entrypoints, in four
-tests — but `forge coverage` does not mark `require` arms the way it marks `if` arms, so they are
-counted as missed regardless.
+reading rather than reporting: most of the uncovered arms are the `require` statements in
+`recordRound` and `recordRoundBatch`. Those are tested — replay and a false verdict, in both
+entrypoints, in four tests — but `forge coverage` does not mark `require` arms the way it marks `if`
+arms, so they are counted as missed regardless.
 
-The other two were real, and reading the report is what found them. One was an untested zero-`feedId`
-guard in `registerFeed` — now covered. The other is a zero-address check in the constructor that is
+Reading the report is also what found the arms that were genuinely untested. A zero-`feedId` guard
+in `registerFeed` — now covered. A zero-address check in the registry's constructor that is
 **unreachable**: `Ownable` runs first and rejects the zero owner before that body executes, which is
-why the existing test expects `OwnableInvalidOwner` and not our own error.
+why the existing test expects `OwnableInvalidOwner` and not our own error. And, found by this same
+pass, `strikeCap`'s refusal of a non-positive reference price — now covered by T-S16, which is what
+moved PegGuard's branch figure from 38/43 to 40/43.
+
+What is left in PegGuard, named rather than averaged away: three revert arms nothing calls
+(`ZeroAddress` in the constructor, and the `ZeroAmount` guards on a deposit too small to mint a
+share and a zero-share withdrawal), the `policyCount()` view that no test reads, and the `break`
+inside `proveAndClaim`'s match loop, which the report does not mark although T-P14 runs straight
+through it. The first three are cheap to close and are the obvious next commit; they are listed here
+rather than rounded off.
 
 That dead line is still in the deployed source, deliberately. `foundry.toml` leaves `bytecode_hash`
 at its default, so the compiler embeds a metadata hash over the source text — editing even a comment
@@ -393,6 +432,9 @@ deployment that has an actual reason to exist.
   traffic.
 - Security suite: forged aggregator, cross-chain spoof, failed source receipt, malformed log,
   replay, log-count cap, duplicate round, owner-cannot-write-a-price, reentrant claim holder.
+- `StrikeGuard.t.sol` (FR-33) tests the underwriting bound *and* the hazard it leaves open: one test
+  asserts that an `UNBOUNDED_STRIKE` pool really will sell in-the-money cover, so the escape hatch
+  cannot quietly become the default without a test saying what it does.
 - `cli/test/abi.test.ts` walks the **compiled ABI** and fails if any state-changing registry
   function ever gains a signed-integer input — a structural guard on "no `setPrice`".
 - The PegGuard invariant suite carries ghost counters and a deterministic lifecycle test, because an
@@ -419,7 +461,7 @@ contracts/
   src/PegGuard.sol                parametric cover
   src/ProbeASC.sol                Day-1 spike only, not in the demo path
   src/libraries/ChainlinkLogLib.sol
-  test/                           89 tests + real mainnet fixtures
+  test/                           147 tests + real mainnet fixtures
 cli/
   src/commands/{spike,register,prove,watch,claim,capture}.ts
   src/lib/{attestcoin,chainlink,creditcoin,config,log,retry,args}.ts

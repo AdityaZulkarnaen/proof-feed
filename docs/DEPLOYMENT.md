@@ -391,6 +391,42 @@ Registration stays `onlyOwner`, which the README already discloses as centraliza
 you can find; if Chainlink rotates an aggregator in future, the mechanism described here becomes
 implementable exactly as specified.
 
+## Pending redeploy — PegGuard with FR-33 (opened 2026-09-09)
+
+The strike bound (FR-33, D-16) was added **after** the PegGuard at
+`0x7Ae5B58c75Fe194F72d1d8a8527688339D013a6e` was deployed and verified. So, precisely:
+
+| | |
+|---|---|
+| `ProvenFeedRegistry` | unchanged — source still reproduces the verified bytecode |
+| `ProvenFeedAdapter` | unchanged — same |
+| `PegGuard` | **source is ahead of chain.** The live contract has no strike ceiling. |
+
+Nothing already on chain became wrong: every transaction linked in this file and in the README
+happened, and the policies they settled were settled by proven rounds. What is true is that the live
+PegGuard would still sell in-the-money cover, which is what FR-33 stops.
+
+To land it:
+
+```bash
+npm run pf -- deploy --proxy USDC/USD --all-phases     # a safe pool: default ceiling, 24h reference
+npm run pf -- deploy --proxy ETH/USD --max-strike-bps 65535   # a demo pool, ceiling deliberately off
+```
+
+Then update, in this order:
+
+1. `.env.example` — the three address lines and the superseded list.
+2. `web/lib/deployment.ts` — the addresses.
+3. **`web/lib/chain.ts`** — the hand-written `getPool` fragment must gain the two new tuple fields
+   `uint16 maxStrikeBps, uint24 maxReferenceAge`, or the live read silently falls back to the
+   committed snapshot and the page shows `cached` forever. It is left matching the *current* live
+   contract on purpose, so the site keeps working until the redeploy actually happens.
+4. The address table in the README, and the note above it about PegGuard being ahead of chain —
+   delete that note once it is no longer true.
+
+`cli/test/abi.test.ts` fails if the CLI is left pointing at a superseded deployment, which is the
+check that catches a half-finished redeploy. Re-verify on Blockscout and record the new hashes here.
+
 ## Known operational issues
 
 1. **`forge script` cannot run against CC3.** The node's `eth_getBlockByNumber` response omits

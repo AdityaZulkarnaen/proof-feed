@@ -45,6 +45,16 @@ export async function deploy(argv: readonly string[]): Promise<number> {
   const bountyBps = numberFlag(argv, '--bounty-bps', 2_000);
   /** FR-30: rate for proportional cover, which pays less than full cover and so costs less. */
   const proportionalBps = numberFlag(argv, '--proportional-bps', 30);
+  /**
+   * FR-33: the highest strike the pool will write, in basis points of the latest proven answer.
+   * The contract's own default (10_000 — at the money, never above it) is what 0 selects, and it
+   * is what you want. 65535 turns the ceiling off, which lets a buyer purchase cover that is
+   * already in the money; it exists only to stage a breach on testnet without waiting for a real
+   * depeg, and the deploy prints a warning when you ask for it.
+   */
+  const maxStrikeBps = numberFlag(argv, '--max-strike-bps', 0);
+  /** FR-33: how old the reference round may be before the pool stops selling. 0 = 24h default. */
+  const maxReferenceAge = numberFlag(argv, '--max-reference-age', 0);
 
   const eth = ethProvider(cfg.ethMainnetRpcUrl);
 
@@ -134,6 +144,27 @@ export async function deploy(argv: readonly string[]): Promise<number> {
       `configurePool("${feed.description}", ${premiumBps} bps/30d, wait ${waitingPeriod}s, ` +
         `max ${maxNotional} CTC, prover bounty ${bountyBps / 100}% of premium, ` +
         `proportional ${proportionalBps} bps/30d) — ${gasLine(cfgRc.gasUsed)}`,
+    );
+
+    // FR-33. Written as its own transaction so the pool's underwriting bound is a separate,
+    // greppable line in the deployment log rather than a silent default nobody chose.
+    const boundsTx = await (guard as Contract).configureStrikeBounds!(
+      feed.feedId,
+      maxStrikeBps,
+      maxReferenceAge,
+    );
+    const boundsRc = await boundsTx.wait();
+    totalGas += boundsRc.gasUsed;
+    out['maxStrikeBps'] = String(maxStrikeBps);
+    if (maxStrikeBps === 65_535) {
+      log.warn(
+        'configureStrikeBounds(UNBOUNDED) — this pool will sell cover that is ALREADY IN THE ' +
+          'MONEY. Demo staging only; never leave a pool holding real value like this.',
+      );
+    }
+    log.ok(
+      `configureStrikeBounds(${maxStrikeBps === 0 ? 'default 10000' : maxStrikeBps} bps, ` +
+        `${maxReferenceAge === 0 ? 'default 86400' : maxReferenceAge}s) — ${gasLine(boundsRc.gasUsed)}`,
     );
 
     // 5. Report

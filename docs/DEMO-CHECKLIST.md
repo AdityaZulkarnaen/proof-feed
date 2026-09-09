@@ -27,6 +27,19 @@ cd contracts && forge test    # warm the cache so it is fast on camera
 cd .. && npm run pf -- demo --yes   # confirm the live state still reads
 ```
 
+**If you redeploy PegGuard first (FR-33 is not on chain yet — docs/DEPLOYMENT.md §Pending
+redeploy):** a fresh pool now refuses to sell cover at a strike above the market, which is exactly
+what staging a breach requires. Deploy the demo pool with the ceiling explicitly off:
+
+```bash
+npm run pf -- deploy --proxy ETH/USD --max-strike-bps 65535
+```
+
+It prints a warning and emits `PoolStrikeBoundsConfigured` on chain, which is the honest version of
+this: the protection is off *for the demo pool, deliberately, visibly*. Say that on camera when the
+claim shot comes up — it takes six seconds and it is the difference between a staged demo and a
+misleading one. Every other pool keeps the default.
+
 `docs/demo-output.txt` holds a captured run if you want to check what the output should look like.
 
 ## Shot list (≤ 3 min)

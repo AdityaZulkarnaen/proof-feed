@@ -36,6 +36,13 @@ contract PegGuardInvariantTest is Test {
         guard = new PegGuard(IProvenFeedRegistry(address(registry)), owner);
         guard.configurePool(FEED_ID, 50, 0, 100 ether, true, 2_000, 30);
 
+        // FR-33: these suites are about the money paths, not the underwriting bound, and most of
+        // them buy cover before any round exists to price a strike against. The ceiling is turned
+        // off here on purpose; `StrikeGuard.t.sol` is where the default behaviour is tested.
+        uint16 unbounded = guard.UNBOUNDED_STRIKE();
+        vm.prank(owner);
+        guard.configureStrikeBounds(FEED_ID, unbounded, 0);
+
         handler = new PegGuardHandler(registry, guard, FEED_ID);
         vm.deal(address(handler), 10_000 ether);
 

@@ -132,6 +132,55 @@ the same guard against vacuity that the ghost counters exist for.
 D-14 and `docs/DEPLOYMENT.md` §P2, and is reproducible with `eth_getLogs` against any of those
 proxies.
 
+## 5c. P2 — the strike bound (FR-33), `StrikeGuard.t.sol`
+
+Sixteen tests. The reference price in all but one of them is a **real captured mainnet round**, so
+the numbers are Chainlink's, not ours; the exception is T-S16, which needs a value no USDC/USD round
+has ever printed.
+
+| ID | Test | Asserts |
+|---|---|---|
+| T-S01 | `test_StrikeCap_DefaultsToTheLatestProvenAnswer` | an unconfigured pool is already safe: cap = latest proven answer |
+| T-S02 | `test_BuyCover_RejectsAStrikeAboveTheLatestProvenPrice` | **the exploit itself**, as a revert: in-the-money cover cannot be sold |
+| T-S03 | `test_BuyCover_AcceptsAStrikeAtOrBelowTheCap` | at the cap and below it both still write |
+| T-S04 | `test_StrikeCap_TightensWithMaxStrikeBps` | 9,500 bps ⇒ cap = 95% of the proven price, floored |
+| T-S05 | `test_StrikeCap_IsNotMovedByProvingAnOlderRound` | monotonic `latestRoundId` ⇒ importing the 2023 depeg cannot drag the ceiling to $0.88 |
+| T-S06 | `test_BuyCover_RevertsWhenNoRoundHasEverBeenProven` | `NoReferencePrice` — no price, no sale |
+| T-S07 | `test_BuyCover_RevertsWhenTheReferenceIsStale` | a dead keeper stops sales instead of pricing against a forgotten number |
+| T-S08 | `test_StrikeCap_IsFreshAtExactlyTheMaximumAge` | the boundary is inclusive |
+| T-S09 | `test_StrikeCap_HonoursACustomReferenceAge` | a pool can demand a fresher reference than 24 h |
+| T-S10 | `test_ConfigureStrikeBounds_RejectsACeilingAboveTheReference` | no half-measures between at-the-money and the sentinel |
+| T-S11 | `test_ConfigureStrikeBounds_IsOwnerOnlyAndFeedChecked` | `onlyOwner`, and the feed must exist |
+| T-S12 | `test_ConfigureStrikeBounds_EmitsWhatItSet` | the bound is announced on chain |
+| T-S13 | `test_UnboundedPool_SellsInTheMoneyCover` | the escape hatch really is a hatch — tested as the hazard it is |
+| T-S14 | `test_UnboundedPool_NeedsNoReferenceAtAll` | unbounded reads no price |
+| T-S15 | `test_TighteningBoundsDoesNotAffectAPolicyAlreadyWritten` | **INV-08**: the bound governs selling, never settling — the owner tightens to 50% and the depeg still pays in full |
+| T-S16 | `test_StrikeCap_RefusesANonPositiveReference` | a proven round of `-1` is stored (it was proven) but refused as a *reference*: no ceiling is derived from a non-positive price. Synthetic bytes, because Chainlink's USD feeds have never printed one — but feeds that can print negative values exist. |
+
+The four money suites (`PegGuard`, `ProverBounty`, `ProportionalPayout`, `PegGuardInvariant`) set
+`UNBOUNDED_STRIKE` in `setUp`: they were written to exercise payouts, most of them buy cover before
+any round exists to price against, and mixing the underwriting bound into them would test two things
+at once. The bound's own behaviour lives here.
+
+## 5d. Static analysis and one-off measurements
+
+- `forge lint src` runs in CI (`.github/workflows/ci.yml`) and the job **fails on any high-severity
+  finding**. `forge lint` itself always exits 0, so the gate is the output being empty.
+- One high-severity lint is excluded, with its reasoning, in `contracts/foundry.toml`:
+  `arbitrary-send-eth` on `PegGuard._pay`. Paying an address chosen by whoever bought the policy or
+  deposited the liquidity *is* the product; the destination is read from storage, never from the
+  caller at call time, and every payer is `nonReentrant` with effects before the transfer.
+- Medium and below are reviewed and accepted rather than silenced: `uninitialized-local` fires on
+  struct declarations that are fully assigned before use, and `unsafe-typecast` on casts whose
+  bounds are enforced a line or two above (`durationDays ≤ 365`, `payout ≤ notional`).
+- `forge fmt --check` is **not** in CI. The deployed sources are frozen against the bytecode
+  Blockscout has verified — solc hashes the source text into the metadata — so a whitespace-only
+  reformat would break reproduction of a live, verified deployment for no benefit.
+- The feed-heartbeat measurement written back into docs/05 is reproducible: read `AnswerUpdated`
+  from `proxy.aggregator()` over a 20,000-block window with ethers `getLogs`, sort by
+  `topics[2]` (the aggregator round id), and take the largest gap between consecutive `updatedAt`
+  values. USDC/USD gives 23.01 h, ETH/USD 1.02 h.
+
 ## 6. CLI tests (`cli/test`, vitest or node:test)
 - `chainlink.decodeAnswerUpdated` on a recorded real log → matches fixture.
 - FR-32: `recordRoundBatch`'s ABI shape — per-transaction arrays but a **scalar** continuity proof.
