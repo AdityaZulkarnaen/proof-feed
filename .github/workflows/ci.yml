@@ -1,0 +1,90 @@
+# CI for ProofFeed + PegGuard.
+#
+# Everything here runs WITHOUT network access to any chain: the Foundry suite mocks only the
+# precompile's verdict (Foundry has no precompiles) and decodes real captured mainnet bytes from
+# contracts/test/fixtures. Nothing in this workflow touches CC3, Ethereum mainnet or the prover,
+# so it needs no secrets and cannot be broken by a testnet outage.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contracts:
+    name: contracts — build, test, lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive # contracts/lib/forge-std
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # Solidity dependencies come from npm (@gluwa/asc-contracts, @openzeppelin), remapped to
+      # ../node_modules in foundry.toml — so the install must happen before forge build.
+      - run: npm ci
+
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+
+      - run: forge --version
+        working-directory: contracts
+
+      - name: forge build
+        run: forge build
+        working-directory: contracts
+
+      - name: forge test
+        run: forge test -vv
+        working-directory: contracts
+
+      # Gate on high-severity findings only. Medium and below are reviewed and accepted — see
+      # docs/07-TEST-PLAN.md §"Static analysis"; most are struct-local false positives and
+      # deliberate checked casts, and the deployed sources are frozen against their verified
+      # bytecode, so a cosmetic edit there costs more than it buys.
+      # `forge lint` is advisory and always exits 0, so the gate is the output itself: any
+      # high-severity finding in src/ fails the job. The one high-severity pattern this codebase
+      # has on purpose (`arbitrary-send-eth` on PegGuard._pay) is excluded, with its reasoning, in
+      # contracts/foundry.toml.
+      - name: forge lint (high severity must be empty)
+        working-directory: contracts
+        run: |
+          findings=$(forge lint src --severity high 2>&1)
+          echo "$findings"
+          if [ -n "$findings" ]; then
+            echo "::error::high-severity lint findings in contracts/src"
+            exit 1
+          fi
+
+  cli:
+    name: cli — typecheck and tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: typecheck
+        run: npm run typecheck
+
+      # Includes the structural guards: no signed-integer input may ever appear on a
+      # state-changing registry function (the "no setPrice" invariant, INV-01), .env.example stays
+      # in sync with the config loader, and the CLI never points at a superseded deployment.
+      - name: unit tests
+        run: npm run test:cli

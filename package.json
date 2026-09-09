@@ -8,7 +8,9 @@
   "scripts": {
     "pf": "npm run --workspace proof-feed-cli pf --",
     "typecheck": "npm run --workspace proof-feed-cli typecheck",
-    "lint": "npm run --workspace proof-feed-cli lint",
+    "lint": "npm run lint:ts && npm run lint:sol",
+    "lint:ts": "npm run --workspace proof-feed-cli lint",
+    "lint:sol": "cd contracts && forge lint src",
     "test:cli": "npm run --workspace proof-feed-cli test",
     "abi": "node scripts/export-abi.mjs"
   },
