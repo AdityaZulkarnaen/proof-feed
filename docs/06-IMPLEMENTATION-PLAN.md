@@ -56,15 +56,22 @@ exact request/response, and pause product code until a reply or a workaround (lo
 
 ## Day 5 (Fri 09-11) — Hardening + docs
 
-- [ ] Gas table (recordRound, proveAndClaim, buyCover) in README from real receipts.
-- [ ] `docs/DEPLOYMENT.md` complete: every address, every demo tx, attestation lag measured, prover host used.
-- [ ] README per docs/08 skeleton, including limitations and "Why recordRound instead of execute".
-- [ ] P1 if time: register USDT/USD; prover bounty (FR-20) only if tests + deployment can be redone the same day.
-- [ ] Optional `web/` static page (P1 FR-23): reads registry + PegGuard via RPC; states live vs cached source.
+**Done ahead of schedule on 2026-09-09**, along with all of P1 and two thirds of P2.
+
+- [x] Gas table (recordRound, recordRoundBatch, proveAndClaim, claim, buyCover ×2, withdrawBounty) in README from real receipts.
+- [x] `docs/DEPLOYMENT.md` complete: every address, every demo tx, attestation lag measured, prover host used.
+- [x] README per docs/08 skeleton, including limitations and "Why recordRound instead of execute".
+- [x] P1: USDT/USD registered and proven (FR-22); prover bounty (FR-20) shipped with tests and an on-chain lifecycle.
+- [x] `web/` page (FR-23): reads registry + PegGuard via RPC; labels live vs cached.
+- [x] P2: proportional payout (FR-30) and batch proving (FR-32) shipped; FR-31 researched and
+      closed with evidence (D-14). See `docs/DEPLOYMENT.md` §P2.
+
+Remaining, and all of it needs a human: record the video, fill the DoraHacks page, make the repo
+public, deploy `web/` to Vercel (root directory `web`), and look at the landing page in a browser.
 
 ## Day 6 (Sat 09-12) — Demo video + submission draft
 
-- [ ] Record ≤ 3 min video following docs/08 script. Show Blockscout, not slides.
+- [ ] Record ≤ 3 min video following `docs/DEMO-CHECKLIST.md` (docs/08 §1a now points there). Show Blockscout, not slides.
 - [ ] DoraHacks BUIDL page filled: title, one-liner, track DeFi, GitHub, video, deck (optional 6 slides), live links.
 - [ ] Fresh-clone test: `git clone && npm ci && forge test` passes; `pf prove --latest` works with a fresh wallet.
 

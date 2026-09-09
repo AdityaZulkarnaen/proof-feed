@@ -4,23 +4,25 @@
 > be chosen. Both ran: the *feed import* is Branch H (the real 2023 depeg round) and the *claim* is
 > Branch L (a live ETH/USD round). §1a below is the script to record; §1 is kept as the original.
 
-## 1a. Demo video script — as built (≤ 3 min)
+## 1a. Demo video script — as built
 
-| t | Screen | Say |
-|---|---|---|
-| 0:00 | Title card | "Every price here is a real Ethereum mainnet Chainlink transaction, cryptographically verified on Creditcoin. No relayer. No admin key can insert a number." |
-| 0:10 | Etherscan, tx `0x24500a30…acd8`, 2023-03-11 | "March 11th 2023. Silicon Valley Bank has failed and USDC has lost its peg. This is the Chainlink round that printed 88 cents." |
-| 0:25 | Terminal: `npm run pf -- demo --branch H` | Narrate the surfaces: `getProof` returns a proof with 529 continuity roots for a three-year-old block; `verifySingle` dry-run returns true. |
-| 0:50 | Blockscout, tx `0x51391915…2d06` | "`TransactionVerified` from the precompile at 0xFD2, and `RoundProven` from our registry. 628,000 gas — under one percent of a Creditcoin block. That 2023 round now lives on Creditcoin." |
-| 1:10 | `cast call $ADAPTER "getRoundData(uint80)" 36893488147419104215` | "Readable through the plain Chainlink interface. Any contract already written for Chainlink works unmodified." |
-| 1:25 | Terminal: `npm run pf -- prove --feed USDC/USD --latest` | "And the same command imports today's round. 320,000 gas." |
-| 1:45 | Blockscout: PegGuard `CoverBought` | "A treasury bought cover: pay 50 CTC if this feed prints below the strike this week." |
-| 2:00 | Terminal: `npm run pf -- claim --policy 0` | "The claim proves the breaching round and settles in one transaction. Nobody approves it." |
-| 2:20 | Blockscout: `ClaimPaid`, holder balance delta | "Paid. The round decided, not an adjuster." |
-| 2:35 | README "Limitations" | "What it does not do: prove state, prove freshness, or write back to Ethereum. It proves a round *happened* — which is exactly what a parametric claim needs. And you cannot buy cover for a depeg that already printed: cover always starts in the future. That is why the claim demo uses a live round." |
-| 2:50 | Repo + Blockscout links | End. |
+**The shooting script lives in [`docs/DEMO-CHECKLIST.md`](DEMO-CHECKLIST.md), and that is the only
+copy kept current.** It carries the live tx hashes, the gas figures, the shot timings and the
+pre-flight commands; two scripts drifting apart is worse than one, and the hashes have already
+changed twice with redeployments.
 
-Rules: show real hashes; if something is cached or pre-recorded, say so on screen.
+What the recording covers, in order:
+
+1. The real 2023-03-11 USDC depeg on Etherscan — `$0.88`.
+2. `npm run pf -- demo --yes`, narrating the Attestcoin surfaces as they print.
+3. That round proven on Creditcoin: `TransactionVerified` from `0x…0FD2` beside `RoundProven`.
+4. The adapter read through the plain Chainlink `AggregatorV3Interface`.
+5. **A claim settled by proof** — five events in one transaction, ending in `ClaimPaid`.
+6. **The same round paid two ways** (FR-30) — 50 CTC full against 4.41 CTC proportional, identical
+   strike and notional.
+7. **Three rounds, one continuity proof** (FR-32) — including the honest caveat that batching is
+   cheaper only for clustered rounds.
+8. README limitations, then the links.
 
 ## 1. Demo video script (original plan, superseded by §1a)
 
@@ -82,9 +84,19 @@ Badges: Live on CC3 testnet · Blockscout registry · Blockscout PegGuard · Dem
 1. Open the `recordRound` tx on Blockscout → see `TransactionVerified` from `0x…0FD2` and `RoundProven`.
 2. Open Etherscan for the same mainnet tx → same `answer`/`roundId`/`updatedAt`.
 3. Open the `ClaimPaid` tx → payout to holder, referencing a `roundId` that exists in the registry.
-4. Read "Limitations" and find nothing over-claimed.
-5. Run `forge test` → green, including the real-fixture decode test.
+4. Open policy 1's `claim` next to it → same round, a different payout, because the mode differs.
+5. Open the `recordRoundBatch` tx → three `TransactionVerified` logs from one precompile call.
+6. Read "Limitations" and find nothing over-claimed — including the two places we publish a number
+   that argues *against* a feature (batch gas on scattered rounds; the branch-coverage drop).
+7. Run `forge test` → green, including the real-fixture decode test.
+8. Run `npm run pf -- prove-batch --feed ETH/USD --count 3 --compare --dry-run` → reproduces the gas
+   comparison against the live chain without spending anything.
+
+All hashes are in `docs/DEPLOYMENT.md` and the README; `docs/DEMO-CHECKLIST.md` has them in one table.
 
 ## 5. Pitch deck (optional, 6 slides max)
 1 Problem · 2 Insight (a Chainlink round is a mainnet tx; Attestcoin proves mainnet txs) · 3 Architecture ·
-4 Live evidence (Blockscout screenshots) · 5 Security & limitations · 6 What's next (bounties, permissionless registration, batch proofs, more feeds, CEIP ask).
+4 Live evidence (Blockscout screenshots) · 5 Security & limitations · 6 What's next (more feeds, richer
+payout curves, a keeper network, CEIP ask). Note that prover bounties (FR-20), proportional payout
+(FR-30) and batch proving (FR-32) all shipped; permissionless registration (FR-31) is blocked on an
+upstream event that does not occur — see D-14.

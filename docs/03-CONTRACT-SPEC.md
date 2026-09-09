@@ -184,6 +184,38 @@ Validation order (each step reverts on failure; order matters for cheap-first an
 
 `_processAndEmitEvent` (required by `ASCBase`) reverts `UseRecordRound()`.
 
+### 3.5b `recordRoundBatch` — P2 (FR-32), shipped 2026-09-09
+
+```solidity
+function recordRoundBatch(
+    uint64 chainKey, uint64[] calldata blockHeights, bytes[] calldata encodedTransactions,
+    INativeQueryVerifier.MerkleProof[] calldata merkleProofs,
+    bytes32 lowerEndpointDigest, bytes32[] calldata continuityRoots
+) external returns (uint80[] memory roundIds);
+```
+
+Drives the precompile's **batch** `verifyAndEmit` overload, which takes many transactions against one
+shared continuity proof (docs/05 §2a). `MAX_BATCH = 16`.
+
+1. Shape guards: `EmptyBatch`, `BatchTooLarge(n)`, `BatchLengthMismatch(heights, txs, proofs)`.
+2. For every element: `queryId = _computeQueryId(chainKey, blockHeights[i], merkleProofs[i].root,
+   merkleProofs[i].siblings)`; require unused; **set `processedQueries[queryId] = true` immediately**.
+   Hoisting the write here is what makes an intra-batch duplicate fail for free, and it is safe
+   because a failed verification reverts the whole call and unwinds every write.
+3. **One** call to `VERIFIER.verifyAndEmit(chainKey, blockHeights, encodedTransactions,
+   merkleProofs, ContinuityProof{lowerEndpointDigest, continuityRoots})`; require true.
+4. `_record(chainKey, queryIds[i], encodedTransactions[i])` per element — the identical decode,
+   emitter-check and storage path as the single-proof entrypoint, so no security step is weakened.
+5. Return every stored round id, in batch order.
+
+**All-or-nothing (D-15).** The precompile returns a single bool for the whole set, so a failure
+cannot be attributed to one element; reverting preserves the guarantee that a stored round was
+individually verified. Consequently one rejected element discards the batch, and a batch that fails
+does not burn any query id.
+
+Batching is not unconditionally cheaper — the shared proof must span the whole batch — and that is a
+CLI concern, not a contract one; see docs/DEPLOYMENT.md §P2 for the measurements.
+
 ### 3.6 Views
 - `latestRoundData(feedId)`: revert `NoRoundYet` if `latestRoundId == 0`.
 - `isFresh(feedId, maxAge)`: `latest.updatedAt + maxAge ≥ block.timestamp` (false if no round).
@@ -251,13 +283,35 @@ Storage: `IProvenFeedRegistry public immutable registry; mapping(bytes32 => Pool
   - then `_claim(policyId, roundId)` (internal version of claim). Whole tx reverts if the claim fails (INV-10).
 - `expire(policyId)`: `ACTIVE && block.timestamp > expiry` → `status = EXPIRED; locked −= notional`; emit `PolicyExpired`.
 
+### 5.4b P2 additions — proportional payout (FR-30), shipped 2026-09-09
+- `enum PayoutMode { FULL, PROPORTIONAL }`, stored on the policy at purchase.
+- `Pool.proportionalBpsPer30d` — its own rate; **zero disables the mode** for that pool (D-13).
+  `configurePool` gains it as a seventh parameter.
+- `quoteFor(feedId, notional, durationDays, mode)` and `quoteBountyFor(...)`; `quote()` /
+  `quoteBounty()` remain and mean `FULL`. Quoting `PROPORTIONAL` on a pool with rate 0 reverts
+  `ProportionalCoverUnavailable(feedId)`.
+- `buyCover(feedId, strike, notional, durationDays, mode)` — an **overload**; the four-argument form
+  is unchanged and means `FULL`, so every existing call site and the CLI keep working.
+- `payoutFor(mode, notional, strike, answer) pure returns (uint256)` — the whole rule, callable by
+  anyone before anything settles. `FULL` → `notional`. `PROPORTIONAL` → `notional * (strike −
+  answer) / strike`, returning `notional` when `answer <= 0` and `0` when `answer >= strike`.
+- `_claim` computes `payout = payoutFor(p.mode, ...)`; reverts `PayoutTooSmall(answer, strike)` when
+  it floors to zero, leaving the policy ACTIVE for a deeper round. Effects become
+  `locked −= notional` (the **whole** reserve) but `balance −= payout`, so the unpaid remainder
+  becomes free liquidity. `Policy.payout` records what was paid.
+- `ClaimPaid(policyId, roundId, holder, payout, released, caller)` — the amount field is now the
+  actual payout, with `released = notional − payout`.
+- The prover bounty is unscaled: the prover did the same work either way.
+
 ### 5.5 Events / errors (complete list)
-Events: `PoolConfigured, Deposited, Withdrawn, CoverBought, ClaimPaid, PolicyExpired`.
-Errors: `UnknownFeed, PoolInactive, InvalidStrike, InvalidNotional, InvalidDuration, InsufficientCapacity(uint256 available, uint256 requested), InsufficientLiquidity(uint256 available, uint256 requested), WrongPremium(uint256 expected, uint256 sent), PolicyNotActive(uint256 id), RoundNotProven(bytes32, uint80), RoundOutsideWindow(uint64,uint64,uint64), StrikeNotBreached(int256,int256), RoundNotInProof(uint80), NotExpired, TransferFailed`.
+Events: `PoolConfigured, PoolBountyConfigured, PoolProportionalConfigured, Deposited, Withdrawn,
+CoverBought, ClaimPaid, PolicyExpired, BountyAccrued, BountyWithdrawn, BountyReleased`.
+Errors: `UnknownFeed, PoolInactive, InvalidStrike, InvalidNotional, InvalidDuration, InsufficientCapacity(uint256 available, uint256 requested), InsufficientLiquidity(uint256 available, uint256 requested), WrongPremium(uint256 expected, uint256 sent), PolicyNotActive(uint256 id), RoundNotProven(bytes32, uint80), RoundOutsideWindow(uint64,uint64,uint64), StrikeNotBreached(int256,int256), RoundNotInProof(uint80), NotExpired, TransferFailed, ZeroAmount, NothingOwed(address), InvalidBountyShare(uint16), PoolWipedOut(bytes32), UnknownPolicy(uint256), ZeroAddress, ProportionalCoverUnavailable(bytes32), PayoutTooSmall(int256,int256)`.
 
 ### 5.6 Notes
 - Strike is in feed decimals (USDC/USD: 8 decimals → `0.97 USD = 97_000_000`).
-- Binary payout (full notional). Proportional is P2 (FR-30).
+- Payout mode is chosen per policy (§5.4b). `FULL` is the default and the four-argument `buyCover`.
+  Proportional is priced separately because it pays less (D-13).
 - Premium accrues to the pool at purchase (no refunds). Simplicity over fairness; say so in README.
 
 ---

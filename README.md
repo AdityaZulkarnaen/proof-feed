@@ -349,24 +349,26 @@ twice, and cannot re-prove one the single-proof path already consumed — both d
 ```
 contracts: 130 tests, 8 suites — forge test          (no network access)
 cli:        25 tests                                  — npm run test:cli
-coverage:   98.7% of lines on src/ (233/236), excluding the Day-1 spike contract
+coverage:   99.0% of lines on src/ (308/311), excluding the Day-1 spike contract
 ```
 
-Coverage below was measured on the P1 tree (`forge coverage --ir-minimum`). The P2 additions —
-`recordRoundBatch` and the proportional-payout path — ship with 29 dedicated tests plus a new
-invariant, but the percentages have not been re-run since; re-measure with:
-
-```bash
-cd contracts && forge coverage --ir-minimum --no-match-coverage "(test|script)" --report summary
-```
+Re-measured on the P2 tree with
+`forge coverage --ir-minimum --no-match-coverage "(test|script)" --report summary`:
 
 | Contract | Lines | Branches |
 |---|---|---|
-| `ProvenFeedRegistry` | 100.00% (97/97) | 72.73% (16/22) |
+| `ProvenFeedRegistry` | 100.00% (122/122) | 65.52% (19/29) |
 | `ProvenFeedAdapter` | 100.00% (23/23) | 100.00% (4/4) |
 | `ChainlinkLogLib` | 100.00% (13/13) | 100.00% (2/2) |
-| `PegGuard` | 97.09% (100/103) | 87.50% (21/24) |
+| `PegGuard` | 98.04% (150/153) | 91.43% (32/35) |
 | `ProbeASC` | 0% — Day-1 spike only, deliberately not in the demo path or the suite |
+
+Every line of the registry is covered, batch entrypoint included. Its **branch** figure fell from
+72.73% to 65.52% when FR-32 landed, and that is not noise: `recordRoundBatch`'s argument guards
+add short-circuiting conditions the suite only enters from one side — `BatchLengthMismatch` is
+reached through a wrong `encodedTransactions.length`, never through a wrong `merkleProofs.length`.
+Reported rather than smoothed over; the uncovered arms are argument-shape guards, not proof or
+payout logic.
 
 - The happy paths decode **real Ethereum mainnet bytes**: two proofs captured by `pf capture` and
   committed as fixtures, including the 2023 depeg transaction. Only the precompile's *verdict* is

@@ -179,7 +179,10 @@ contract RecordRoundBatchTest is BaseTest {
         );
     }
 
-    /// T-B13: the parallel arrays must line up, or an element would be proven against another's proof.
+    /// T-B13: the parallel arrays must line up, or an element would be proven against another's
+    /// proof. Both arms of the guard are exercised — a short `encodedTransactions` and a short
+    /// `merkleProofs` — because a `||` that is only ever entered from one side is a guard whose
+    /// other half has never been run.
     function test_RecordRoundBatch_RevertsOnLengthMismatch() public {
         vm.prank(keeper);
         vm.expectRevert(abi.encodeWithSelector(IProvenFeedRegistry.BatchLengthMismatch.selector, 2, 1, 2));
@@ -188,6 +191,17 @@ contract RecordRoundBatchTest is BaseTest {
             new uint64[](2),
             new bytes[](1),
             new INativeQueryVerifier.MerkleProof[](2),
+            bytes32(0),
+            new bytes32[](0)
+        );
+
+        vm.prank(keeper);
+        vm.expectRevert(abi.encodeWithSelector(IProvenFeedRegistry.BatchLengthMismatch.selector, 2, 2, 1));
+        registry.recordRoundBatch(
+            MAINNET_KEY,
+            new uint64[](2),
+            new bytes[](2),
+            new INativeQueryVerifier.MerkleProof[](1),
             bytes32(0),
             new bytes32[](0)
         );

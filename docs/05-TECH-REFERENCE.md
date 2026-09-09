@@ -3,6 +3,8 @@
 Legend: **[OK]** verified from source code / official docs on 2026-09-07. **[VERIFY]** plausible but must be
 confirmed during the Day-1 spike; write the evidence back here. **[D1]** verified by the Day-1 spike on
 **2026-09-08**; evidence in `docs/spike-output.json` (reproduce with `npm run pf -- spike`).
+**[P2]** verified while building FR-30/FR-32 on **2026-09-09**; evidence in `docs/DEPLOYMENT.md` §P2
+(reproduce with `npm run pf -- prove-batch --feed ETH/USD --count 3 --compare --dry-run`).
 
 ## 1. Creditcoin CC3 Testnet [OK]
 
@@ -27,7 +29,10 @@ confirmed during the Day-1 spike; write the evidence back here. **[D1]** verifie
 | Prover (proof builder) URL — candidate A | `https://prover.cc3-testnet.creditcoin.network` — **[D1] live**, `GET /api/v1/health` 200. **Selected.** |
 | Prover URL — candidate B | `https://proof-gen-api.cc3-testnet.creditcoin.network` — **[D1] live**, byte-identical health payload and identical uptime counter, so both hostnames front the same service. **Q1 resolved: use candidate A.** |
 | Prover health caveat | **[D1]** the health payload is `{"status":"degraded","cc3_rpc_connected":false,"eth_rpc_connected":true}`. This is the steady state and does **not** block proving — `getProof` returned valid proofs for both a fresh and a 2023 transaction while "degraded". Do not read it as a NO-GO. |
-| Prover endpoints | `GET /api/v1/health`, `GET /api/v1/attested-height/{chainKey}`, `GET /api/v1/proof-by-tx/{chainKey}/{txHash}` (used by `ProofBuilder.getProof`), `POST /api/v1/proof-batch/{chainKey}` (undocumented, used by index41) |
+| Prover endpoints | `GET /api/v1/health`, `GET /api/v1/attested-height/{chainKey}`, `GET /api/v1/proof-by-tx/{chainKey}/{txHash}` (used by `ProofBuilder.getProof`), `POST /api/v1/proof-batch-by-tx/{chainKey}` (used by `ProofBuilder.getBatchProof` — **[P2] verified live**, see §2a) |
+| Batch proof shape | **[P2]** the batch response is `{chainKey, fromHeader, toHeader, continuityProof, merkleProofs: header -> txIndex -> {txHash, txBytes, merkleProof}, cached, generatedAt}` — **one** `ContinuityProof` for the whole set, one Merkle proof per transaction. That is exactly the argument shape of the precompile's batch `verifyAndEmit` overload. |
+| Batch span limit | **[P2] measured**: the endpoint returns **HTTP 400** for sets spanning more than roughly a thousand mainnet blocks. 3 tx across 390 blocks and 4 across 845 succeeded; 5 across 1,148 and 6 across 1,451 were refused. Not documented anywhere — discovered by probing. |
+| Batch continuity length | **[P2] measured**: the shared chain spans `fromHeader..toHeader` plus the reach to the attested checkpoint, so its root count tracks the batch's **span**, not its size — 4 blocks → 24 roots, 247 → 341, 390 → 391, 845 → 939. A single proof only reaches its own nearest checkpoint (1–94 roots observed). This is why batching is cheaper only for clustered transactions (D-15). |
 | Attestation lag | **[D1] measured 37–41 blocks ≈ 7.4–8.2 min** behind the mainnet head over three consecutive runs (e.g. attested 25,927,050 vs head 25,927,087). Matches the official "~8 min". Gate G2 allows 120 min, so ~15× headroom. |
 | Attestation genesis height, chain key 3 | **[D1] returns `0`.** The SDK documents 0 as "chain unsupported **or** no configured genesis height" — **ambiguous, and it must not be used to decide Branch H/L.** Settled by direct probe instead (next two rows). |
 | Deep-history coverage, chain key 3 | **[D1] `getContinuityBounds(3, h).isAttested == true`** at h = 16,810,000 / 20,000,000 / 25,000,000 / 25,500,000 / 25,800,000 / 25,900,000 — checkpoints reach back past the March-2023 depeg. Bound spacing widens with age (1,000-block gaps in 2023, 100-block gaps near the tip). |
@@ -35,6 +40,34 @@ confirmed during the Day-1 spike; write the evidence back here. **[D1]** verifie
 | Historical evidence mainnet works | index41 (BUIDL 47994) verified mainnet block `25,764,741` on CC3 testnet in tx `0xd136dea0524b7e0e9eba54bf9724eec78597c2598047a96849af727f4d243810` (status 1, 1,092,100 gas for 3 verifications + decode) |
 | What is proven | `abiEncode(tx, receipt)` — transaction fields + receipt (status, gasUsed, logs, bloom). **Not state. Not block timestamp.** |
 | Writability | not available on testnet (under third-party audit). One-directional only. |
+
+## 2a. The batch verification path — P2 verified [P2]
+
+`INativeQueryVerifier` (`0x…0FD2`) declares **two overloads each** of `verifyAndEmit` and `verify`.
+`ASCBase` only ever calls the single-transaction one; the batch overload is
+
+```solidity
+function verifyAndEmit(
+    uint64 chainKey,
+    uint64[] calldata heights,
+    bytes[] calldata encodedTransactions,
+    MerkleProof[] calldata merkleProofs,
+    ContinuityProof calldata sharedContinuityProof
+) external returns (bool);
+```
+
+Verified end to end before any contract was written: `getBatchProof` on three ETH/USD transactions
+spanning mainnet blocks 25,937,610–25,938,000 returned one continuity proof of 391 roots plus three
+Merkle proofs, and both `PrecompileBlockProver.verifyBatch` and a direct `eth_call` to
+`0xFD2.verify(batch)` returned **true**.
+
+Two properties that matter for any contract built on it:
+
+- **One verdict for the whole set.** There is no per-element result, so a batch entrypoint cannot
+  attribute a failure and must be all-or-nothing (D-15).
+- **One `TransactionVerified` event per element**, confirmed on chain in
+  `0x882c6ae14cb691ce9d1da231ea4d1733b09e5b986d833f17b529c4217ea33da2` (3 transactions, 3 events,
+  one precompile call).
 
 ## 3. Packages and APIs [OK — read from the installed packages]
 
